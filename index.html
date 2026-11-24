@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>mzc051-年度记忆歌曲</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
     --primary: #9f68e9;
@@ -12,7 +13,7 @@
     --muted: #7a6a92;
     --border: #e6def5;
     --pink: #e94e9b;
-    --gray: #999999; /* 新增：灰色 */
+    --gray: #999999;
   }
   * { box-sizing: border-box; }
   body {
@@ -46,49 +47,51 @@
     box-shadow: 0 4px 12px rgba(106, 56, 176, 0.08);
     display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: space-between;
     font-size: 16px;
     font-weight: 600;
   }
   
+  .today-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
   .today-item {
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  .today-item .label {
+  .today-item .label { color: var(--text); }
+  .today-item .value { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+  .divider { color: var(--primary-dark); opacity: 0.4; font-weight: normal; margin: 0 8px; }
+
+  .today-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     color: var(--text);
   }
+  .today-right .value { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
 
-  .today-item .value {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-  }
-
-  .divider {
-    color: var(--primary-dark);
-    opacity: 0.4;
-    font-weight: normal;
-    margin: 0 8px;
-  }
-
-  /* 表格 */
-  .table-card {
+  /* 表格与图表卡片 */
+  .card {
     background: #fff;
     border: 1px solid var(--border);
     border-radius: 14px;
-    overflow: hidden;
+    padding: 16px;
     box-shadow: 0 6px 18px rgba(106, 56, 176, 0.06);
+    margin-bottom: 24px;
   }
+
   table {
     width: 100%;
     border-collapse: collapse;
     font-size: 15px;
   }
   
-  /* 表头深紫色 */
   thead th {
     background: var(--primary-dark);
     color: #ffffff;
@@ -106,21 +109,28 @@
   }
   tbody tr:nth-child(even) { background: #fcfaff; }
 
-  /* 排名与涨幅样式 */
   .rank { font-weight: 700; color: var(--primary-dark); }
   .rank-change { font-weight: 700; }
-  
-  /* 颜色类 */
   .pink-text { color: var(--pink); font-weight: 700; }
   .gray-text { color: var(--gray); font-weight: 700; }
 
   .votes { font-variant-numeric: tabular-nums; }
   .change { font-variant-numeric: tabular-nums; }
 
-  .empty {
-    padding: 40px 16px;
-    text-align: center;
-    color: var(--muted);
+  .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+
+  /* 图表容器与标题 */
+  .chart-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 16px;
+    padding-left: 8px;
+  }
+  .chart-container {
+    position: relative;
+    height: 320px;
+    width: 100%;
   }
 </style>
 </head>
@@ -131,18 +141,25 @@
 
   <!-- 今日数据卡片 -->
   <div class="today-card">
-    <div class="today-item">
-      <span class="label">今日票数涨幅</span>
-      <span class="value" id="todayVoteChange">-</span>
+    <div class="today-left">
+      <div class="today-item">
+        <span class="label">今日票数涨幅</span>
+        <span class="value" id="todayVoteChange">-</span>
+      </div>
+      <span class="divider">|</span>
+      <div class="today-item">
+        <span class="label">今日排名涨幅</span>
+        <span class="value" id="todayRankChange">-</span>
+      </div>
     </div>
-    <span class="divider">|</span>
-    <div class="today-item">
-      <span class="label">今日排名涨幅</span>
-      <span class="value" id="todayRankChange">-</span>
+    <div class="today-right">
+      <span class="label">距top100票数差</span>
+      <span class="value" id="todayDistanceTo100">-</span>
     </div>
   </div>
 
-  <div class="table-card">
+  <!-- 表格 -->
+  <div class="card" style="padding: 0; overflow: hidden;">
     <table>
       <thead>
         <tr>
@@ -157,12 +174,20 @@
       </tbody>
     </table>
   </div>
+
+  <!-- 图表 -->
+  <div class="card">
+    <div class="chart-header">票数涨幅</div>
+    <div class="chart-container">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
 </div>
 
 <script>
 const CSV_FILE = "song_rank_history.csv";
 
-// 简单 CSV 解析（支持双引号包裹）
+// 简单 CSV 解析
 function parseCSV(text) {
   const rows = [];
   let row = [], cell = "", inQuotes = false;
@@ -177,7 +202,7 @@ function parseCSV(text) {
       if (ch === '"') inQuotes = true;
       else if (ch === ',') { row.push(cell); cell = ""; }
       else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ""; }
-      else if (ch === '\r') { /* skip */ }
+      else if (ch === '\r') { }
       else cell += ch;
     }
   }
@@ -185,15 +210,10 @@ function parseCSV(text) {
   return rows.filter(r => r.length && r.some(c => c.trim() !== ""));
 }
 
-// 判断颜色并格式化：0或空 -> 灰色，非0 -> 粉色
 function formatChange(n, defaultVal = "-") {
-  if (n === undefined || n === null || n === "") {
-    return { text: defaultVal, cls: "gray-text" };
-  }
+  if (n === undefined || n === null || n === "") return { text: defaultVal, cls: "gray-text" };
   const num = Number(n);
-  if (isNaN(num) || num === 0) {
-    return { text: "0", cls: "gray-text" };
-  }
+  if (isNaN(num) || num === 0) return { text: "0", cls: "gray-text" };
   return { text: num > 0 ? `+${num}` : `${num}`, cls: "pink-text" };
 }
 
@@ -202,18 +222,126 @@ function fmtNum(n) {
   return Number(n).toLocaleString("zh-CN");
 }
 
+// 画图逻辑
+function renderChart(records) {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  
+  // 生成 0-24 点的 X 轴标签
+  const labels = Array.from({length: 25}, (_, i) => `${i}:00`);
+
+  // 按日期分组
+  const byDate = {};
+  records.forEach(r => {
+    const date = r["时间"].split(" ")[0];
+    const hour = parseInt(r["时间"].split(" ")[1].split(":")[0], 10);
+    if (!byDate[date]) byDate[date] = {};
+    byDate[date][hour] = Number(r["总票数"]);
+  });
+
+  // 获取最近的 7 个日期并升序排列
+  const dates = Object.keys(byDate).sort().slice(-7);
+  
+  // 找到今天和昨天
+  const todayStr = new Date().toLocaleDateString("sv-SE");
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("sv-SE");
+
+  const datasets = [];
+
+  dates.forEach((date, index) => {
+    const hourData = byDate[date];
+    
+    // 填充 0-24 点的数据
+    const data = [];
+    let lastValue = null;
+    for (let h = 0; h <= 24; h++) {
+      if (hourData[h] !== undefined) {
+        lastValue = hourData[h];
+      }
+      data.push(lastValue);
+    }
+
+    // 颜色配置
+    let borderColor = "#999999";
+    let backgroundColor = "rgba(153, 153, 153, 0.1)";
+    let borderWidth = 2;
+
+    if (date === todayStr) {
+      borderColor = "#9f68e9"; // 主题色
+      backgroundColor = "rgba(159, 104, 233, 0.15)";
+      borderWidth = 3;
+    } else if (date === yesterday) {
+      borderColor = "#bfa3e7"; // 浅紫色
+      backgroundColor = "rgba(191, 163, 231, 0.1)";
+    } else {
+      // 较早的日期用浅灰色渐变
+      const opacity = 0.2 + (index * 0.1); 
+      borderColor = `rgba(150, 150, 150, ${opacity})`;
+      backgroundColor = `rgba(150, 150, 150, 0.05)`;
+    }
+
+    datasets.push({
+      label: date,
+      data: data,
+      borderColor: borderColor,
+      backgroundColor: backgroundColor,
+      borderWidth: borderWidth,
+      pointRadius: 2, // 每个时段都要有点
+      pointHoverRadius: 4,
+      tension: 0.2, // 平滑曲线
+      spanGaps: true // 连接空点
+    });
+  });
+
+  new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { boxWidth: 12, font: { size: 12 } }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            callback: function(val, index) {
+              if (index % 3 === 0 || index === 24) return labels[index];
+              return '';
+            }
+          }
+        },
+        y: {
+          beginAtZero: false, // 纵坐标自适应
+          suggestedMin: 0, 
+          grid: { color: '#f0eaf9' },
+          ticks: {
+            callback: function(value) { return value.toLocaleString("zh-CN"); }
+          }
+        }
+      }
+    }
+  });
+}
+
+// 主渲染函数
 function render(records) {
-  // 判断完全无数据的情况
   if (!records || records.length === 0) {
     document.getElementById("tbody").innerHTML = `<tr><td colspan="4" class="empty">-</td></tr>`;
     return;
   }
 
-  // 时间升序
   records.sort((a, b) => a["时间"].localeCompare(b["时间"]));
 
-  // 计算今日涨幅
-  const todayStr = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
+  // 计算顶部数据
+  const todayStr = new Date().toLocaleDateString("sv-SE");
   const todayRecords = records.filter(r => r["时间"].startsWith(todayStr));
   let todayVoteChange = 0;
   let todayRankChange = 0;
@@ -230,7 +358,6 @@ function render(records) {
     todayRankChange = (Number(prev["排名"]) || 0) - (Number(last["排名"]) || 0);
   }
 
-  // 渲染顶部卡片
   const vRes = formatChange(todayVoteChange);
   const rRes = formatChange(todayRankChange);
   
@@ -242,14 +369,23 @@ function render(records) {
   elRank.innerText = rRes.text;
   elRank.className = "value " + rRes.cls;
 
-  // 表格（倒序，最新在上）
+  const latestRecord = records[records.length - 1];
+  const distanceTo100 = latestRecord["距top100票数差"];
+  const elDistance = document.getElementById("todayDistanceTo100");
+  if (distanceTo100 !== undefined && distanceTo100 !== null && distanceTo100 !== "") {
+    elDistance.innerText = fmtNum(distanceTo100);
+    elDistance.className = "value gray-text";
+  } else {
+    elDistance.innerText = "-";
+    elDistance.className = "value gray-text";
+  }
+
+  // 渲染表格
   const tbody = document.getElementById("tbody");
   const rowsDesc = [...records].reverse();
-  
   tbody.innerHTML = rowsDesc.map(r => {
     const rankRes = formatChange(r["较上次排名变化"]);
     const voteRes = formatChange(r["较上次票数涨幅"]);
-
     return `<tr>
       <td>${r["时间"] ? r["时间"] : "-"}</td>
       <td><span class="rank">${r["排名"] || "-"}</span> / <span class="rank-change ${rankRes.cls}">${rankRes.text}</span></td>
@@ -257,6 +393,9 @@ function render(records) {
       <td class="change ${voteRes.cls}">${voteRes.text}</td>
     </tr>`;
   }).join("");
+
+  // 渲染图表
+  renderChart(records);
 }
 
 fetch(CSV_FILE)
@@ -277,7 +416,6 @@ fetch(CSV_FILE)
   })
   .catch((err) => {
     console.error(err);
-    // 读取失败时不兜底，直接显示空数据占位符
     render([]);
   });
 </script>
