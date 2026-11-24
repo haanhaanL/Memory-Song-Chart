@@ -119,8 +119,7 @@ def get_history_records():
 
 def save_record(row_data):
     file_exists = os.path.exists(CSV_FILE)
-    # 增加了新列 '距100名票数差'
-    fieldnames = ['时间', '排名', '总票数', '距100名票数差', '较上次排名变化', '较上次票数涨幅', '当日排名变化', '当日票数涨幅']
+    fieldnames = ['时间', '排名', '总票数', '距top100票数差', '较上次排名变化', '较上次票数涨幅', '当日排名变化', '当日票数涨幅']
     
     with open(CSV_FILE, 'a', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -184,7 +183,7 @@ def main():
         '时间': now.strftime('%Y-%m-%d %H:%M:%S'),
         '排名': current_rank,
         '总票数': current_votes,
-        '距100名票数差': diff_to_100,
+        '距top100票数差': diff_to_100,
         '较上次排名变化': last_rank_change,
         '较上次票数涨幅': last_votes_change,
         '当日排名变化': daily_rank_change,
@@ -192,7 +191,7 @@ def main():
     }
 
     save_record(row_data)
-    print(f"数据已保存到 {CSV_FILE}，距100名差 {diff_to_100} 票")
+    print(f"数据已保存到 {CSV_FILE}，距top100差 {diff_to_100} 票")
 
 if __name__ == "__main__":
     main()
