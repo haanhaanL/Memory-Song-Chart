@@ -72,10 +72,17 @@
     overflow: hidden;
   }
 
+  .table-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-align: center;
+    padding: 16px 16px 12px;
+  }
+
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    border-radius: 14px;
     overflow: hidden;
     margin: 0 -1px;
   }
@@ -85,9 +92,8 @@
     border-collapse: collapse;
     font-size: 15px;
     min-width: 400px;
-    border-radius: 14px;
-    overflow: hidden;
     border: 1px solid var(--border);
+    /* 不再设置 border-radius / overflow，表格本身直角 */
   }
   thead th {
     background: var(--primary-dark);
@@ -98,16 +104,12 @@
     font-size: 14px;
     white-space: nowrap;
   }
-  thead th:first-child { border-top-left-radius: 13px; }
-  thead th:last-child { border-top-right-radius: 13px; }
   tbody td {
     padding: 12px 16px;
     border-top: 1px solid #f0eaf9;
     white-space: nowrap;
   }
   tbody tr:nth-child(even) { background: #fcfaff; }
-  tbody tr:last-child td:first-child { border-bottom-left-radius: 13px; }
-  tbody tr:last-child td:last-child { border-bottom-right-radius: 13px; }
 
   .rank { font-weight: 700; color: var(--primary-dark); }
   .rank-change { font-weight: 700; }
@@ -132,12 +134,11 @@
     width: 100%;
   }
 
-  /* 自定义 tooltip 样式 */
   .chart-tooltip {
     font-family: -apple-system, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: 13px;
     color: #2c1a4a;
-    min-width: 160px;
+    min-width: 180px;
   }
   .chart-tooltip .tt-head {
     display: flex;
@@ -147,7 +148,7 @@
     margin-bottom: 6px;
     border-bottom: 1px solid #f0eaf9;
   }
-  .chart-tooltip .tt-head span:first-child { width: 70px; }
+  .chart-tooltip .tt-head span:first-child { width: 96px; }
   .chart-tooltip .tt-head span:last-child { flex: 1; text-align: right; }
   .chart-tooltip .tt-row {
     display: flex;
@@ -158,7 +159,7 @@
     width: 8px; height: 8px; border-radius: 50%;
     margin-right: 8px; flex-shrink: 0;
   }
-  .chart-tooltip .tt-date { width: 70px; }
+  .chart-tooltip .tt-date { width: 96px; }
   .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
 
   @media (max-width: 600px) {
@@ -171,6 +172,9 @@
     .card { padding: 12px; }
     .chart-container { height: 260px; }
     thead th, tbody td { padding: 10px 12px; font-size: 14px; }
+    .chart-tooltip { min-width: 150px; }
+    .chart-tooltip .tt-head span:first-child,
+    .chart-tooltip .tt-date { width: 84px; }
   }
 </style>
 </head>
@@ -192,12 +196,14 @@
       </div>
     </div>
     <div class="today-right">
-      <span class="label">距top100票数差</span>
+      <span class="label">距top100票差</span>
       <span class="value" id="todayDistanceTo100">-</span>
     </div>
   </div>
 
+  <!-- 表格 -->
   <div class="card" style="padding: 0;">
+    <div class="table-header">每小时数据 · 近12条</div>
     <div class="table-wrapper">
       <table>
         <thead>
@@ -215,6 +221,7 @@
     </div>
   </div>
 
+  <!-- 图表 -->
   <div class="card">
     <div class="chart-header">票数涨幅</div>
     <div class="chart-container" id="trendChart"></div>
@@ -312,7 +319,7 @@ function renderChart(records) {
       lineColor = "#e94e9b"; lineType = 'solid';
     }
 
-    const labelDate = date.substring(5); // "11-24"
+    const labelDate = date.substring(5);
     legendData.push(labelDate);
     series.push({
       name: labelDate,
@@ -338,16 +345,17 @@ function renderChart(records) {
       textStyle: { color: '#2c1a4a', fontSize: 13 },
       extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
       formatter: function(params) {
-        // 表头：浅灰色 + 间距
         let html = '<div class="chart-tooltip">';
         html += '<div class="tt-head"><span>时间</span><span>涨幅</span></div>';
         params.forEach(p => {
           const val = p.value;
           const color = (val !== null && val !== undefined && val > 0) ? '#e94e9b' : '#999999';
           const valText = (val === null || val === undefined) ? '-' : (val > 0 ? '+' + val : val);
+          const hourLabel = labels[p.dataIndex];
+          const timeText = `${p.seriesName} ${hourLabel}`;
           html += '<div class="tt-row">';
           html += `<span class="tt-dot" style="background:${color}"></span>`;
-          html += `<span class="tt-date">${p.seriesName}</span>`;
+          html += `<span class="tt-date">${timeText}</span>`;
           html += `<span class="tt-val" style="color:${color}">${valText}</span>`;
           html += '</div>';
         });
@@ -358,8 +366,8 @@ function renderChart(records) {
     legend: {
       data: legendData,
       top: 0,
-      left: 'center',          // 图例居中
-      icon: 'circle',          // 实心圆
+      left: 'center',
+      icon: 'circle',
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 16,
@@ -450,7 +458,7 @@ function render(records) {
   }
 
   const tbody = document.getElementById("tbody");
-  const rowsDesc = [...records].reverse();
+  const rowsDesc = [...records].reverse().slice(0, 12);
   tbody.innerHTML = rowsDesc.map(r => {
     const rankRes = formatChange(r["排名变化"]);
     const voteRes = formatChange(r["票数涨幅"]);
