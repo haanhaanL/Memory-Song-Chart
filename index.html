@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>mzc051-年度记忆歌曲</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -14,6 +15,7 @@
     --border: #e6def5;
     --pink: #e94e9b;
     --gray: #999999;
+    --orange: #f28c28;
   }
   * { box-sizing: border-box; }
   body {
@@ -37,7 +39,7 @@
     margin-bottom: 20px;
   }
 
-  /* 今日数据卡片 */
+  /* 今日数据卡片（桌面端） */
   .today-card {
     background: #fdfcff;
     border: 1px solid var(--primary-dark);
@@ -86,10 +88,17 @@
     margin-bottom: 24px;
   }
 
+  /* 表格容器自适应 */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
     font-size: 15px;
+    min-width: 400px;
   }
   
   thead th {
@@ -113,30 +122,58 @@
   .rank-change { font-weight: 700; }
   .pink-text { color: var(--pink); font-weight: 700; }
   .gray-text { color: var(--gray); font-weight: 700; }
-  .orange-text { color: #f28c28; font-weight: 800; }
+  .orange-text { color: var(--orange); font-weight: 800; }
 
   .votes { font-variant-numeric: tabular-nums; }
   .change { font-variant-numeric: tabular-nums; }
 
   .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
 
-  /* 图表头部自定义行 */
-  .chart-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-left: 8px;
-  }
-  .chart-title {
+  /* 图表容器与标题 */
+  .chart-header {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
+    margin-bottom: 16px;
+    padding-left: 8px;
   }
   .chart-container {
     position: relative;
     height: 320px;
     width: 100%;
+  }
+
+  /* ======== 移动端适配 ======== */
+  @media (max-width: 600px) {
+    body { padding: 20px 12px 48px; }
+    h1 { font-size: 24px; }
+    
+    /* 重新排版卡片：变成纵向排列 */
+    .today-card { 
+      flex-direction: column; 
+      align-items: stretch; 
+      padding: 16px; 
+      gap: 12px;
+    }
+    .today-left { 
+      flex-direction: column; 
+      align-items: stretch; 
+      gap: 12px; 
+      width: 100%;
+    }
+    .today-item, .today-right { 
+      display: flex; 
+      justify-content: space-between; 
+      width: 100%; 
+    }
+    
+    /* 隐藏竖线 */
+    .divider { display: none; } 
+
+    /* 图表和其他微调 */
+    .card { padding: 12px; }
+    .chart-container { height: 260px; }
+    thead th, tbody td { padding: 10px 12px; font-size: 14px; }
   }
 </style>
 </head>
@@ -165,24 +202,27 @@
   </div>
 
   <!-- 表格 -->
-  <div class="card" style="padding: 0; overflow: hidden;">
-    <table>
-      <thead>
-        <tr>
-          <th>时间</th>
-          <th>排名</th>
-          <th>总票数</th>
-          <th>涨幅</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="4" class="empty">加载中...</td></tr>
-      </tbody>
-    </table>
+  <div class="card" style="padding: 0;">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>排名</th>
+            <th>总票数</th>
+            <th>涨幅</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="4" class="empty">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- 图表 -->
   <div class="card">
+    <div class="chart-header">票数涨幅</div>
     <div class="chart-container">
       <canvas id="trendChart"></canvas>
     </div>
@@ -231,10 +271,8 @@ function fmtNum(n) {
 function renderChart(records) {
   const ctx = document.getElementById('trendChart').getContext('2d');
   
-  // 生成 0-24 点的 X 轴标签
   const labels = Array.from({length: 25}, (_, i) => `${i}:00`);
 
-  // 按日期分组
   const byDate = {};
   records.forEach(r => {
     const date = r["时间"].split(" ")[0];
@@ -247,17 +285,13 @@ function renderChart(records) {
     }
   });
 
-  // 获取最近的 7 个日期并升序排列
   const dates = Object.keys(byDate).sort().slice(-7);
-  
   const todayStr = new Date().toLocaleDateString("sv-SE");
   const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("sv-SE");
-
   const datasets = [];
 
   dates.forEach((date, index) => {
     const hourData = byDate[date];
-    
     const data = [];
     for (let h = 0; h <= 24; h++) {
       data.push(hourData[h] !== undefined ? hourData[h] : null);
@@ -265,10 +299,7 @@ function renderChart(records) {
 
     let hasPositive = false;
     for (let h = 0; h <= 24; h++) {
-      if (hourData[h] !== undefined && hourData[h] > 0) {
-        hasPositive = true;
-        break;
-      }
+      if (hourData[h] !== undefined && hourData[h] > 0) { hasPositive = true; break; }
     }
 
     let lineColor = "#999999";
@@ -276,21 +307,16 @@ function renderChart(records) {
     let borderDash = [5, 5];
 
     if (date === todayStr) {
-      lineColor = "#e94e9b";
-      borderWidth = 3;
-      borderDash = [];
+      lineColor = "#e94e9b"; borderWidth = 3; borderDash = [];
     } else if (date === yesterday) {
-      lineColor = "#9f68e9";
-      borderWidth = 2;
-      borderDash = [];
+      lineColor = "#9f68e9"; borderWidth = 2; borderDash = [];
     } else {
       const opacity = 0.3 + (index * 0.1); 
       lineColor = `rgba(150, 150, 150, ${opacity})`;
     }
 
     if (hasPositive && date !== yesterday) {
-      lineColor = "#e94e9b";
-      borderDash = [];
+      lineColor = "#e94e9b"; borderDash = [];
     }
 
     datasets.push({
@@ -315,25 +341,10 @@ function renderChart(records) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: {
-          display: true,
-          text: '票数涨幅',
-          align: 'start', // 标题靠左
-          color: '#6a38b0',
-          font: { size: 16, weight: 'bold', family: 'system-ui' },
-          padding: { bottom: 20 }
-        },
         legend: {
           position: 'top',
-          align: 'end', // 图例靠右
-          labels: {
-            usePointStyle: true,
-            pointStyle: 'circle',
-            boxWidth: 8,
-            boxHeight: 8,
-            font: { size: 12 },
-            padding: 16
-          }
+          align: 'end',
+          labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, font: { size: 12 }, padding: 16 }
         },
         tooltip: {
           mode: 'index',
@@ -350,28 +361,15 @@ function renderChart(records) {
           callbacks: {
             label: function(context) {
               let label = context.dataset.label || '';
-              if (label) {
-                label += ': ';
-              }
+              if (label) label += ': ';
               const val = context.parsed.y;
               if (val === null || val === undefined) return label + '-';
-              
-              // 数据格式 +xxx，正数为粉色
-              if (val > 0) {
-                label += '+' + val;
-              } else {
-                label += val;
-              }
-              return label;
+              return label + (val > 0 ? '+' + val : val);
             },
             labelColor: function(context) {
-              // 让图例的点与数据颜色一致
               const val = context.parsed.y;
               const color = (val > 0) ? '#e94e9b' : '#999999';
-              return {
-                borderColor: color,
-                backgroundColor: color
-              };
+              return { borderColor: color, backgroundColor: color };
             }
           }
         }
@@ -391,9 +389,7 @@ function renderChart(records) {
           suggestedMin: 0,
           ticks: {
             maxTicksLimit: 6,
-            callback: function(value) { 
-              return value < 0 ? 0 : value.toLocaleString("zh-CN"); 
-            }
+            callback: function(value) { return value < 0 ? 0 : value.toLocaleString("zh-CN"); }
           },
           grid: { color: '#f0eaf9' }
         }
@@ -402,7 +398,6 @@ function renderChart(records) {
   });
 }
 
-// 主渲染函数
 function render(records) {
   if (!records || records.length === 0) {
     document.getElementById("tbody").innerHTML = `<tr><td colspan="4" class="empty">-</td></tr>`;
@@ -411,7 +406,6 @@ function render(records) {
 
   records.sort((a, b) => a["时间"].localeCompare(b["时间"]));
 
-  // 计算顶部数据
   const todayStr = new Date().toLocaleDateString("sv-SE");
   const todayRecords = records.filter(r => r["时间"].startsWith(todayStr));
   let todayVoteChange = 0;
@@ -448,10 +442,9 @@ function render(records) {
     elDistance.className = "value orange-text";
   } else {
     elDistance.innerText = "-";
-    elDistance.className = "value gray-text";
+    elDistance.className = "value orange-text";
   }
 
-  // 渲染表格
   const tbody = document.getElementById("tbody");
   const rowsDesc = [...records].reverse();
   tbody.innerHTML = rowsDesc.map(r => {
@@ -465,7 +458,6 @@ function render(records) {
     </tr>`;
   }).join("");
 
-  // 渲染图表
   renderChart(records);
 }
 
