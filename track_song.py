@@ -13,7 +13,7 @@ SONG_NAME = "阴天也会有烦恼吗"
 CSV_FILE = "song_rank_history.csv"
 BJ_TZ = timezone(timedelta(hours=8))
 
-# ================= 签名算法 =================
+# ================= QQ音乐签名算法 =================
 PART_1_INDEXES = [23, 14, 6, 36, 16, 7, 19]
 PART_2_INDEXES = [16, 1, 32, 12, 19, 27, 8, 5]
 SCRAMBLE_VALUES = [89, 39, 179, 150, 218, 82, 58, 252, 177, 52, 186, 123, 120, 64, 242, 133, 143, 161, 121, 179]
@@ -78,27 +78,27 @@ def fetch_current_data():
     # 4. 解析数据
     data = resp.json()
     
-    # 检查接口返回是否正常
     if "req_0" not in data or data["req_0"].get("code") != 0:
         raise Exception(f"接口返回异常: {data}")
         
-    song_list = data["req_0"]["data"]["songList"]
+    # 注意：根据实际返回的 JSON 结构，字段名叫 list
+    song_list = data["req_0"]["data"]["list"]
     
-    # 遍历前 300 首歌，找到目标
+    # 遍历列表，找到目标歌曲
     for item in song_list:
-        song_info = item.get("songInfo", {})
-        if SONG_NAME in song_info.get("name", ""):
+        # 字段直接平铺在 item 里，没有 songInfo 包裹
+        if SONG_NAME in item.get("name", ""):
             rank = item.get("rank")
-            votes = item.get("score")  # 已确认字段为 score
+            votes = item.get("score")
             if rank is not None and votes is not None:
                 print(f"找到歌曲！排名: {rank}, 票数: {votes}")
                 return int(rank), int(votes)
             else:
-                print(f"找到歌曲但字段缺失，完整数据: {item}")
+                print(f"找到歌曲但字段缺失: {item}")
             
     raise Exception(f"在榜单中未找到《{SONG_NAME}》")
 
-# ================= 本地历史对比逻辑 =================
+# ================= 数据对比与保存 =================
 def get_history_records():
     if not os.path.exists(CSV_FILE):
         return []
@@ -122,6 +122,7 @@ def main():
     try:
         current_rank, current_votes = fetch_current_data()
         
+        # 强制使用北京时间
         now = datetime.now(BJ_TZ)
         today_str = now.strftime('%Y-%m-%d')
         print(f"记录时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
