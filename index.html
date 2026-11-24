@@ -93,7 +93,6 @@
     font-size: 15px;
     min-width: 400px;
     border: 1px solid var(--border);
-    /* 不再设置 border-radius / overflow，表格本身直角 */
   }
   thead th {
     background: var(--primary-dark);
@@ -325,7 +324,7 @@ function renderChart(records) {
       name: labelDate,
       type: 'line',
       data: data,
-      smooth: 0.2,
+      smooth: false,               // 折线改为直线
       connectNulls: false,
       showSymbol: true,
       symbol: 'circle',
@@ -446,11 +445,26 @@ function render(records) {
   elRank.innerText = rRes.text;
   elRank.className = "value " + rRes.cls;
 
+  // 距top100票差：显示 票差 / 与上一时段差值
   const latestRecord = records[records.length - 1];
-  const distanceTo100 = latestRecord["距top100票数差"];
+  const prevRecord = records.length >= 2 ? records[records.length - 2] : null;
   const elDistance = document.getElementById("todayDistanceTo100");
+  const distanceTo100 = latestRecord["距top100票数差"];
   if (distanceTo100 !== undefined && distanceTo100 !== null && distanceTo100 !== "") {
-    elDistance.innerText = fmtNum(distanceTo100);
+    const currVal = Number(distanceTo100);
+    let diffText = "";
+    let diffCls = "gray-text";
+    if (prevRecord && prevRecord["距top100票数差"] !== undefined && prevRecord["距top100票数差"] !== null && prevRecord["距top100票数差"] !== "") {
+      const prevVal = Number(prevRecord["距top100票数差"]);
+      const diff = currVal - prevVal;
+      if (diff > 0) { diffText = `+${diff}`; diffCls = "gray-text"; }
+      else if (diff < 0) { diffText = `${diff}`; diffCls = "pink-text"; }
+      else { diffText = "0"; diffCls = "gray-text"; }
+    } else {
+      diffText = "-";
+      diffCls = "gray-text";
+    }
+    elDistance.innerHTML = `${fmtNum(currVal)} / <span class="${diffCls}">${diffText}</span>`;
     elDistance.className = "value orange-text";
   } else {
     elDistance.innerText = "-";
