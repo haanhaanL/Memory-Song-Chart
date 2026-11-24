@@ -277,7 +277,7 @@ function fmtNum(n) {
   return Number(n).toLocaleString("zh-CN");
 }
 
-// 画图逻辑 —— 调整了图例与tooltip
+// 画图逻辑
 function renderChart(records) {
   const ctx = document.getElementById('trendChart').getContext('2d');
   
@@ -329,7 +329,7 @@ function renderChart(records) {
       lineColor = "#e94e9b"; borderDash = [];
     }
 
-    // 图例文字格式：MM-DD（今天高亮）
+    // 图例文字格式：MM-DD
     const labelDate = date.substring(5); // "11-24"
     datasets.push({
       label: labelDate,
@@ -367,7 +367,6 @@ function renderChart(records) {
             generateLabels: (chart) => {
               const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
               labels.forEach(label => {
-                // 使用实心填充，无边框
                 label.strokeStyle = 'transparent';
                 label.fillStyle = label.strokeStyle === 'transparent' ? label.fillStyle : label.strokeStyle;
               });
@@ -388,11 +387,11 @@ function renderChart(records) {
           bodyFont: { size: 13 },
           displayColors: true,
           callbacks: {
-            // 自定义tooltip标题：只显示小时
-            title: function(tooltipItems) {
-              return tooltipItems[0].label; // 如 "11:00"
+            // 表头：显示“时间”和“涨幅”
+            title: function() {
+              return '时间        涨幅';
             },
-            // 自定义tooltip内容： "MM-DD  +xxx" 格式
+            // 每行数据：MM-DD  +xxx
             label: function(context) {
               const dateLabel = context.dataset.label; // "11-24"
               const val = context.parsed.y;
@@ -404,11 +403,10 @@ function renderChart(records) {
             labelColor: function(context) {
               const val = context.parsed.y;
               const color = (val > 0) ? '#e94e9b' : '#999999';
-              return { 
-                borderColor: color, 
+              return {
+                borderColor: color,
                 backgroundColor: color,
-                borderWidth: 0,        // 无描边
-                borderRadius: 4        // 圆点
+                borderWidth: 0
               };
             }
           }
