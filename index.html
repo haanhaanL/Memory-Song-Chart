@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>mzc052</title>
+<title>mzc051</title>
 <style>
   :root {
     --primary: #9f68e9;
@@ -11,8 +11,7 @@
     --text: #2c1a4a;
     --muted: #7a6a92;
     --border: #e6def5;
-    --up: #2e9e5b;
-    --down: #d33b3b;
+    --pink: #e94e9b;
   }
   * { box-sizing: border-box; }
   body {
@@ -36,30 +35,43 @@
     margin-bottom: 20px;
   }
 
-  /* 今日涨幅卡片 */
+  /* 今日数据卡片 */
   .today-card {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: #fff;
-    border-radius: 16px;
-    padding: 20px 24px;
+    background: #fdfcff;
+    border: 1px solid var(--primary-dark);
+    border-radius: 14px;
+    padding: 16px 24px;
     margin-bottom: 24px;
-    box-shadow: 0 10px 24px rgba(106, 56, 176, 0.22);
+    box-shadow: 0 4px 12px rgba(106, 56, 176, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 16px;
+    font-weight: 600;
   }
-  .today-card .label {
-    font-size: 14px;
-    opacity: 0.85;
-    margin-bottom: 6px;
+  
+  .today-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .today-card .value {
-    font-size: 30px;
-    font-weight: 700;
-    letter-spacing: 1px;
+
+  .today-item .label {
+    color: var(--text);
   }
-  .today-card .value small {
-    font-size: 15px;
-    font-weight: 500;
-    opacity: 0.85;
-    margin-left: 6px;
+
+  .today-item .value {
+    color: var(--pink);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+
+  .divider {
+    color: var(--primary-dark);
+    opacity: 0.4;
+    font-weight: normal;
+    margin: 0 8px;
   }
 
   /* 表格 */
@@ -75,15 +87,18 @@
     border-collapse: collapse;
     font-size: 15px;
   }
+  
+  /* 表头深紫色 */
   thead th {
-    background: #f2ecfb;
-    color: var(--primary-dark);
+    background: var(--primary-dark); /* 深紫色背景 */
+    color: #ffffff; /* 白色文字 */
     font-weight: 600;
     text-align: left;
     padding: 13px 16px;
     font-size: 14px;
     white-space: nowrap;
   }
+  
   tbody td {
     padding: 12px 16px;
     border-top: 1px solid #f0eaf9;
@@ -92,14 +107,15 @@
   tbody tr:nth-child(even) { background: #fcfaff; }
   tbody tr:hover { background: #f5efff; }
 
+  /* 排名与涨幅样式 */
   .rank { font-weight: 700; color: var(--primary-dark); }
-  .rank-change { font-size: 12px; margin-left: 6px; font-weight: 600; }
-  .up { color: var(--up); }
-  .down { color: var(--down); }
-  .flat { color: var(--muted); }
+  .rank-change { font-weight: 700; }
+  
+  /* 粉色调 */
+  .pink-text { color: var(--pink); font-weight: 700; }
 
   .votes { font-variant-numeric: tabular-nums; }
-  .change { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .change { font-variant-numeric: tabular-nums; }
 
   .empty {
     padding: 40px 16px;
@@ -111,11 +127,19 @@
 <body>
 <div class="wrap">
   <h1>mzc052</h1>
-  <div class="subtitle">《阴天也会有烦恼吗》· TF_ING穆祉丞 · 榜单追踪</div>
+  <div class="subtitle">《阴天也会有烦恼吗》· TF_ING穆祉丞</div>
 
+  <!-- 今日数据卡片 -->
   <div class="today-card">
-    <div class="label">今日票数涨幅（00:00 至当前）</div>
-    <div class="value" id="todayChange">--<small>票</small></div>
+    <div class="today-item">
+      <span class="label">今日票数涨幅</span>
+      <span class="value" id="todayVoteChange">--</span>
+    </div>
+    <span class="divider">|</span>
+    <div class="today-item">
+      <span class="label">今日排名涨幅</span>
+      <span class="value" id="todayRankChange">--</span>
+    </div>
   </div>
 
   <div class="table-card">
@@ -140,7 +164,7 @@ const CSV_FILE = "song_rank_history.csv";
 
 // 如果 CSV 读取失败，用这行数据兜底演示
 const FALLBACK = [
-  { 时间: "2026-11-24 13:05:50", 排名: "147", 总票数: "46347", 较上次票数涨幅: "0" }
+  { 时间: "2026-11-24 13:05:50", 排名: "147", 总票数: "46347", 较上次票数涨幅: "0", 较上次排名变化: "0" }
 ];
 
 // 简单 CSV 解析（支持双引号包裹）
@@ -166,11 +190,11 @@ function parseCSV(text) {
   return rows.filter(r => r.length && r.some(c => c.trim() !== ""));
 }
 
-function fmtChange(n) {
+// 专门用来格式化需要粉色显示的数字
+function fmtPinkChange(n) {
   n = Number(n) || 0;
-  if (n > 0) return { text: "+" + n, cls: "up" };
-  if (n < 0) return { text: String(n), cls: "down" };
-  return { text: "0", cls: "flat" };
+  if (n > 0) return `+${n}`;
+  return `${n}`;
 }
 
 function fmtNum(n) {
@@ -181,24 +205,28 @@ function render(records) {
   // 时间升序
   records.sort((a, b) => a["时间"].localeCompare(b["时间"]));
 
-  // 计算今日涨幅：今天 00:00 第一条 vs 今天最后一条
+  // 计算今日涨幅
   const todayStr = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
   const todayRecords = records.filter(r => r["时间"].startsWith(todayStr));
-  let todayChange = 0;
+  let todayVoteChange = 0;
+  let todayRankChange = 0;
+
   if (todayRecords.length >= 2) {
-    const first = Number(todayRecords[0]["总票数"]) || 0;
-    const last = Number(todayRecords[todayRecords.length - 1]["总票数"]) || 0;
-    todayChange = last - first;
+    const first = todayRecords[0];
+    const last = todayRecords[todayRecords.length - 1];
+    todayVoteChange = (Number(last["总票数"]) || 0) - (Number(first["总票数"]) || 0);
+    // 排名涨幅：首测排名 - 当前排名（正数代表上升）
+    todayRankChange = (Number(first["排名"]) || 0) - (Number(last["排名"]) || 0);
   } else if (records.length >= 2) {
-    // 如果今天只有一条，退而求其次展示最近一条 vs 上一条
     const last = records[records.length - 1];
     const prev = records[records.length - 2];
-    todayChange = (Number(last["总票数"]) || 0) - (Number(prev["总票数"]) || 0);
+    todayVoteChange = (Number(last["总票数"]) || 0) - (Number(prev["总票数"]) || 0);
+    todayRankChange = (Number(prev["排名"]) || 0) - (Number(last["排名"]) || 0);
   }
 
-  const tc = fmtChange(todayChange);
-  document.getElementById("todayChange").innerHTML =
-    `<span class="${tc.cls}" style="color:#fff">${tc.text}</span><small>票</small>`;
+  // 渲染顶部卡片
+  document.getElementById("todayVoteChange").innerText = fmtPinkChange(todayVoteChange);
+  document.getElementById("todayRankChange").innerText = fmtPinkChange(todayRankChange);
 
   // 表格（倒序，最新在上）
   const tbody = document.getElementById("tbody");
@@ -207,20 +235,18 @@ function render(records) {
     tbody.innerHTML = `<tr><td colspan="4" class="empty">暂无数据</td></tr>`;
     return;
   }
+  
   tbody.innerHTML = rowsDesc.map(r => {
     const rankChange = Number(r["较上次排名变化"] || 0);
-    const rc = rankChange > 0
-      ? `<span class="rank-change up">↑${rankChange}</span>`
-      : rankChange < 0
-        ? `<span class="rank-change down">↓${Math.abs(rankChange)}</span>`
-        : `<span class="rank-change flat">-</span>`;
+    const rankChangeStr = fmtPinkChange(rankChange);
     const voteChange = Number(r["较上次票数涨幅"] || 0);
-    const vc = fmtChange(voteChange);
+    const voteChangeStr = fmtPinkChange(voteChange);
+
     return `<tr>
       <td>${r["时间"] || ""}</td>
-      <td><span class="rank">${r["排名"] || "-"}</span>${rc}</td>
+      <td><span class="rank">${r["排名"] || "-"}</span> / <span class="rank-change pink-text">${rankChangeStr}</span></td>
       <td class="votes">${fmtNum(r["总票数"])}</td>
-      <td class="change ${vc.cls}">${vc.text}</td>
+      <td class="change pink-text">${voteChangeStr}</td>
     </tr>`;
   }).join("");
 }
