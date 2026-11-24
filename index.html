@@ -113,19 +113,25 @@
   .rank-change { font-weight: 700; }
   .pink-text { color: var(--pink); font-weight: 700; }
   .gray-text { color: var(--gray); font-weight: 700; }
+  .orange-text { color: #f28c28; font-weight: 800; }
 
   .votes { font-variant-numeric: tabular-nums; }
   .change { font-variant-numeric: tabular-nums; }
 
   .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
 
-  /* 图表容器与标题 */
-  .chart-header {
+  /* 图表头部自定义行 */
+  .chart-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-left: 8px;
+  }
+  .chart-title {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
-    margin-bottom: 16px;
-    padding-left: 8px;
   }
   .chart-container {
     position: relative;
@@ -177,7 +183,6 @@
 
   <!-- 图表 -->
   <div class="card">
-    <div class="chart-header">票数涨幅</div>
     <div class="chart-container">
       <canvas id="trendChart"></canvas>
     </div>
@@ -222,7 +227,7 @@ function fmtNum(n) {
   return Number(n).toLocaleString("zh-CN");
 }
 
-// 画图逻辑 (直接读取 CSV 的较上次票数涨幅)
+// 画图逻辑
 function renderChart(records) {
   const ctx = document.getElementById('trendChart').getContext('2d');
   
@@ -236,8 +241,6 @@ function renderChart(records) {
     const hour = parseInt(r["时间"].split(" ")[1].split(":")[0], 10);
     if (!byDate[date]) byDate[date] = {};
     
-    // 直接把 "较上次票数涨幅" 赋值给当前小时
-    // 注意：如果是当天第一条数据，可能没有“较上次”，默认给 null 或者 0
     const val = r["票数涨幅"];
     if (val !== undefined && val !== null && val !== "") {
       byDate[date][hour] = Number(val);
@@ -256,16 +259,10 @@ function renderChart(records) {
     const hourData = byDate[date];
     
     const data = [];
-    // 直接取数据，没有数据的时段置为 null
     for (let h = 0; h <= 24; h++) {
-      if (hourData[h] !== undefined) {
-        data.push(hourData[h]);
-      } else {
-        data.push(null);
-      }
+      data.push(hourData[h] !== undefined ? hourData[h] : null);
     }
 
-    // 判断该天是否有正数涨幅（决定线的颜色）
     let hasPositive = false;
     for (let h = 0; h <= 24; h++) {
       if (hourData[h] !== undefined && hourData[h] > 0) {
@@ -274,33 +271,30 @@ function renderChart(records) {
       }
     }
 
-    // 颜色配置
     let lineColor = "#999999";
     let borderWidth = 2;
-    let borderDash = [5, 5]; // 灰色用虚线区分
+    let borderDash = [5, 5];
 
     if (date === todayStr) {
-      lineColor = "#e94e9b"; // 今日粉色
+      lineColor = "#e94e9b";
       borderWidth = 3;
       borderDash = [];
     } else if (date === yesterday) {
-      lineColor = "#9f68e9"; // 昨日主题紫
+      lineColor = "#9f68e9";
       borderWidth = 2;
       borderDash = [];
     } else {
-      // 较早的日期用灰色
       const opacity = 0.3 + (index * 0.1); 
       lineColor = `rgba(150, 150, 150, ${opacity})`;
     }
 
-    // 如果该天有正数涨幅，强制给该天粉色（除了昨天，昨天固定紫色）
     if (hasPositive && date !== yesterday) {
       lineColor = "#e94e9b";
-      borderDash = []; // 有正涨幅的用实线
+      borderDash = [];
     }
 
     datasets.push({
-      label: date.substring(5), // 日期格式统一为 MM-DD
+      label: date.substring(5),
       data: data,
       borderColor: lineColor,
       borderWidth: borderWidth,
@@ -309,7 +303,7 @@ function renderChart(records) {
       pointBackgroundColor: lineColor,
       pointBorderWidth: 0,
       tension: 0.2,
-      spanGaps: false, // 重点：没有数据的点不要连起来，断开
+      spanGaps: false,
       fill: false
     });
   });
@@ -321,11 +315,20 @@ function renderChart(records) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
+        title: {
+          display: true,
+          text: '票数涨幅',
+          align: 'start', // 标题靠左
+          color: '#6a38b0',
+          font: { size: 16, weight: 'bold', family: 'system-ui' },
+          padding: { bottom: 20 }
+        },
         legend: {
           position: 'top',
+          align: 'end', // 图例靠右
           labels: {
-            usePointStyle: true, // 使用点样式
-            pointStyle: 'circle', // 实心圆
+            usePointStyle: true,
+            pointStyle: 'circle',
             boxWidth: 8,
             boxHeight: 8,
             font: { size: 12 },
@@ -335,7 +338,7 @@ function renderChart(records) {
         tooltip: {
           mode: 'index',
           intersect: false,
-          backgroundColor: '#ffffff', // 白色背景
+          backgroundColor: '#ffffff',
           titleColor: '#2c1a4a',
           bodyColor: '#2c1a4a',
           borderColor: '#e6def5',
@@ -343,7 +346,34 @@ function renderChart(records) {
           padding: 10,
           titleFont: { size: 13, weight: 'bold' },
           bodyFont: { size: 13 },
-          displayColors: true
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              const val = context.parsed.y;
+              if (val === null || val === undefined) return label + '-';
+              
+              // 数据格式 +xxx，正数为粉色
+              if (val > 0) {
+                label += '+' + val;
+              } else {
+                label += val;
+              }
+              return label;
+            },
+            labelColor: function(context) {
+              // 让图例的点与数据颜色一致
+              const val = context.parsed.y;
+              const color = (val > 0) ? '#e94e9b' : '#999999';
+              return {
+                borderColor: color,
+                backgroundColor: color
+              };
+            }
+          }
         }
       },
       scales: {
@@ -357,10 +387,10 @@ function renderChart(records) {
           }
         },
         y: {
-          beginAtZero: false, // 纵坐标不从 0 开始
-          suggestedMin: 0, // 保证没有负数
+          beginAtZero: false,
+          suggestedMin: 0,
           ticks: {
-            maxTicksLimit: 6, // 纵轴分5段（包含0为6个刻度）
+            maxTicksLimit: 6,
             callback: function(value) { 
               return value < 0 ? 0 : value.toLocaleString("zh-CN"); 
             }
@@ -415,7 +445,7 @@ function render(records) {
   const elDistance = document.getElementById("todayDistanceTo100");
   if (distanceTo100 !== undefined && distanceTo100 !== null && distanceTo100 !== "") {
     elDistance.innerText = fmtNum(distanceTo100);
-    elDistance.className = "value gray-text";
+    elDistance.className = "value orange-text";
   } else {
     elDistance.innerText = "-";
     elDistance.className = "value gray-text";
