@@ -1,0 +1,42 @@
+name: Track QQ Music Song Rank
+
+on:
+  workflow_dispatch: # 允许外部（cron-job.org）和手动点击运行
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # 用 3.10 比较稳定
+
+      - name: 安装依赖
+        run: |
+          pip install -r requirements.txt
+          # 安装 Playwright 所需的浏览器和系统依赖
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: 运行爬虫脚本
+        run: python track_song.py
+
+      - name: 提交并推送更新的 CSV
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          # 检查文件是否有变动
+          if [ -n "$(git status --porcelain song_rank_history.csv)" ]; then
+            git add song_rank_history.csv
+            git commit -m "Auto update song rank: $(date -u +'%Y-%m-%d %H:%M:%S')"
+            git push
+          else
+            echo "数据无变动，无需提交。"
+          fi
