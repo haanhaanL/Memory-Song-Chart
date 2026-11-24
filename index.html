@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>mzc051-年度记忆歌曲</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <style>
   :root {
     --primary: #9f68e9;
@@ -32,16 +32,15 @@
     font-size: 28px;
     color: var(--primary-dark);
     letter-spacing: 1px;
-    text-align: center; /* 标题居中 */
+    text-align: center;
   }
   .subtitle {
     color: var(--muted);
     font-size: 14px;
     margin-bottom: 20px;
-    text-align: center; /* 副标题居中 */
+    text-align: center;
   }
 
-  /* 今日数据卡片（桌面端） */
   .today-card {
     background: #fdfcff;
     border: 1px solid var(--primary-dark);
@@ -55,49 +54,30 @@
     font-size: 16px;
     font-weight: 600;
   }
-  
-  .today-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .today-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  .today-left { display: flex; align-items: center; gap: 16px; }
+  .today-item { display: flex; align-items: center; gap: 8px; }
   .today-item .label { color: var(--text); }
   .today-item .value { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
   .divider { color: var(--primary-dark); opacity: 0.4; font-weight: normal; margin: 0 8px; }
-
-  .today-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text);
-  }
+  .today-right { display: flex; align-items: center; gap: 8px; color: var(--text); }
   .today-right .value { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
 
-  /* 表格与图表卡片 */
   .card {
     background: #fff;
     border: 1px solid var(--border);
-    border-radius: 14px;       /* 卡片圆角 */
+    border-radius: 14px;
     padding: 16px;
     box-shadow: 0 6px 18px rgba(106, 56, 176, 0.06);
     margin-bottom: 24px;
-    overflow: hidden;          /* 让表格圆角生效 */
+    overflow: hidden;
   }
 
-  /* 表格容器自适应 */
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    border-radius: 14px;       /* 圆角 */
-    overflow: hidden;          /* 配合圆角 */
-    margin: 0 -1px;            /* 微调边框 */
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 0 -1px;
   }
 
   table {
@@ -105,11 +85,10 @@
     border-collapse: collapse;
     font-size: 15px;
     min-width: 400px;
-    border-radius: 14px;       /* 表格本身也圆角 */
+    border-radius: 14px;
     overflow: hidden;
-    border: 1px solid var(--border); /* 边框更柔和 */
+    border: 1px solid var(--border);
   }
-  
   thead th {
     background: var(--primary-dark);
     color: #ffffff;
@@ -121,7 +100,6 @@
   }
   thead th:first-child { border-top-left-radius: 13px; }
   thead th:last-child { border-top-right-radius: 13px; }
-  
   tbody td {
     padding: 12px 16px;
     border-top: 1px solid #f0eaf9;
@@ -136,20 +114,17 @@
   .pink-text { color: var(--pink); font-weight: 700; }
   .gray-text { color: var(--gray); font-weight: 700; }
   .orange-text { color: var(--orange); font-weight: 800; }
-
   .votes { font-variant-numeric: tabular-nums; }
   .change { font-variant-numeric: tabular-nums; }
-
   .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
 
-  /* 图表容器与标题 —— 居中 */
   .chart-header {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
     margin-bottom: 16px;
     padding-left: 8px;
-    text-align: center;        /* 图表标题居中 */
+    text-align: center;
   }
   .chart-container {
     position: relative;
@@ -157,30 +132,42 @@
     width: 100%;
   }
 
-  /* 移动端适配 */
+  /* 自定义 tooltip 样式 */
+  .chart-tooltip {
+    font-family: -apple-system, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    color: #2c1a4a;
+    min-width: 160px;
+  }
+  .chart-tooltip .tt-head {
+    display: flex;
+    color: #999;
+    font-size: 12px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #f0eaf9;
+  }
+  .chart-tooltip .tt-head span:first-child { width: 70px; }
+  .chart-tooltip .tt-head span:last-child { flex: 1; text-align: right; }
+  .chart-tooltip .tt-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 0;
+  }
+  .chart-tooltip .tt-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; flex-shrink: 0;
+  }
+  .chart-tooltip .tt-date { width: 70px; }
+  .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
+
   @media (max-width: 600px) {
     body { padding: 20px 12px 48px; }
     h1 { font-size: 24px; }
-    
-    .today-card { 
-      flex-direction: column; 
-      align-items: stretch; 
-      padding: 16px; 
-      gap: 12px;
-    }
-    .today-left { 
-      flex-direction: column; 
-      align-items: stretch; 
-      gap: 12px; 
-      width: 100%;
-    }
-    .today-item, .today-right { 
-      display: flex; 
-      justify-content: space-between; 
-      width: 100%; 
-    }
-    .divider { display: none; } 
-
+    .today-card { flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; }
+    .today-left { flex-direction: column; align-items: stretch; gap: 12px; width: 100%; }
+    .today-item, .today-right { display: flex; justify-content: space-between; width: 100%; }
+    .divider { display: none; }
     .card { padding: 12px; }
     .chart-container { height: 260px; }
     thead th, tbody td { padding: 10px 12px; font-size: 14px; }
@@ -190,9 +177,8 @@
 <body>
 <div class="wrap">
   <h1>mzc051</h1>
-  <div class="subtitle">阴天也会有烦恼吗</div>
+  <div class="subtitle">《阴天也会有烦恼吗》· TF_ING穆祉丞</div>
 
-  <!-- 今日数据卡片 -->
   <div class="today-card">
     <div class="today-left">
       <div class="today-item">
@@ -211,7 +197,6 @@
     </div>
   </div>
 
-  <!-- 表格 -->
   <div class="card" style="padding: 0;">
     <div class="table-wrapper">
       <table>
@@ -230,19 +215,15 @@
     </div>
   </div>
 
-  <!-- 图表 -->
   <div class="card">
     <div class="chart-header">票数涨幅</div>
-    <div class="chart-container">
-      <canvas id="trendChart"></canvas>
-    </div>
+    <div class="chart-container" id="trendChart"></div>
   </div>
 </div>
 
 <script>
 const CSV_FILE = "song_rank_history.csv";
 
-// 简单 CSV 解析
 function parseCSV(text) {
   const rows = [];
   let row = [], cell = "", inQuotes = false;
@@ -277,10 +258,13 @@ function fmtNum(n) {
   return Number(n).toLocaleString("zh-CN");
 }
 
-// 画图逻辑
+let chartInstance = null;
+
 function renderChart(records) {
-  const ctx = document.getElementById('trendChart').getContext('2d');
-  
+  const el = document.getElementById('trendChart');
+  if (chartInstance) chartInstance.dispose();
+  chartInstance = echarts.init(el);
+
   const labels = Array.from({length: 25}, (_, i) => `${i}:00`);
 
   const byDate = {};
@@ -288,7 +272,6 @@ function renderChart(records) {
     const date = r["时间"].split(" ")[0];
     const hour = parseInt(r["时间"].split(" ")[1].split(":")[0], 10);
     if (!byDate[date]) byDate[date] = {};
-    
     const val = r["票数涨幅"];
     if (val !== undefined && val !== null && val !== "") {
       byDate[date][hour] = Number(val);
@@ -298,7 +281,8 @@ function renderChart(records) {
   const dates = Object.keys(byDate).sort().slice(-7);
   const todayStr = new Date().toLocaleDateString("sv-SE");
   const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("sv-SE");
-  const datasets = [];
+  const series = [];
+  const legendData = [];
 
   dates.forEach((date, index) => {
     const hourData = byDate[date];
@@ -307,133 +291,115 @@ function renderChart(records) {
       data.push(hourData[h] !== undefined ? hourData[h] : null);
     }
 
+    let lineColor = "#999999";
+    let lineWidth = 2;
+    let lineType = 'dashed';
+
+    if (date === todayStr) {
+      lineColor = "#e94e9b"; lineWidth = 3; lineType = 'solid';
+    } else if (date === yesterday) {
+      lineColor = "#9f68e9"; lineWidth = 2; lineType = 'solid';
+    } else {
+      const opacity = 0.3 + (index * 0.1);
+      lineColor = `rgba(150, 150, 150, ${opacity})`;
+    }
+
     let hasPositive = false;
     for (let h = 0; h <= 24; h++) {
       if (hourData[h] !== undefined && hourData[h] > 0) { hasPositive = true; break; }
     }
-
-    let lineColor = "#999999";
-    let borderWidth = 2;
-    let borderDash = [5, 5];
-
-    if (date === todayStr) {
-      lineColor = "#e94e9b"; borderWidth = 3; borderDash = [];
-    } else if (date === yesterday) {
-      lineColor = "#9f68e9"; borderWidth = 2; borderDash = [];
-    } else {
-      const opacity = 0.3 + (index * 0.1); 
-      lineColor = `rgba(150, 150, 150, ${opacity})`;
-    }
-
     if (hasPositive && date !== yesterday) {
-      lineColor = "#e94e9b"; borderDash = [];
+      lineColor = "#e94e9b"; lineType = 'solid';
     }
 
-    // 图例文字格式：MM-DD
     const labelDate = date.substring(5); // "11-24"
-    datasets.push({
-      label: labelDate,
+    legendData.push(labelDate);
+    series.push({
+      name: labelDate,
+      type: 'line',
       data: data,
-      borderColor: lineColor,
-      borderWidth: borderWidth,
-      borderDash: borderDash,
-      pointRadius: 3,
-      pointBackgroundColor: lineColor,
-      pointBorderWidth: 0,
-      tension: 0.2,
-      spanGaps: false,
-      fill: false
+      smooth: 0.2,
+      connectNulls: false,
+      showSymbol: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      itemStyle: { color: lineColor, borderWidth: 0 },
+      lineStyle: { color: lineColor, width: lineWidth, type: lineType }
     });
   });
 
-  new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-          align: 'center',          // 图例居中
-          labels: { 
-            usePointStyle: true, 
-            pointStyle: 'circle',   // 实心圆
-            boxWidth: 8, 
-            boxHeight: 8, 
-            font: { size: 12 }, 
-            padding: 16,
-            // 确保图例是实心圆无描边
-            generateLabels: (chart) => {
-              const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-              labels.forEach(label => {
-                label.strokeStyle = 'transparent';
-                label.fillStyle = label.strokeStyle === 'transparent' ? label.fillStyle : label.strokeStyle;
-              });
-              return labels;
-            }
-          }
-        },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-          backgroundColor: '#ffffff',
-          titleColor: '#2c1a4a',
-          bodyColor: '#2c1a4a',
-          borderColor: '#e6def5',
-          borderWidth: 1,
-          padding: 10,
-          titleFont: { size: 13, weight: 'bold' },
-          bodyFont: { size: 13 },
-          displayColors: true,
-          callbacks: {
-            // 表头：显示“时间”和“涨幅”
-            title: function() {
-              return '时间        涨幅';
-            },
-            // 每行数据：MM-DD  +xxx
-            label: function(context) {
-              const dateLabel = context.dataset.label; // "11-24"
-              const val = context.parsed.y;
-              if (val === null || val === undefined) return `${dateLabel}  -`;
-              const formatted = val > 0 ? `+${val}` : `${val}`;
-              return `${dateLabel}  ${formatted}`;
-            },
-            // 图例颜色：实心圆无描边
-            labelColor: function(context) {
-              const val = context.parsed.y;
-              const color = (val > 0) ? '#e94e9b' : '#999999';
-              return {
-                borderColor: color,
-                backgroundColor: color,
-                borderWidth: 0
-              };
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            callback: function(val, index) {
-              if (index % 3 === 0 || index === 24) return labels[index];
-              return '';
-            }
-          }
-        },
-        y: {
-          beginAtZero: false,
-          suggestedMin: 0,
-          ticks: {
-            maxTicksLimit: 6,
-            callback: function(value) { return value < 0 ? 0 : value.toLocaleString("zh-CN"); }
-          },
-          grid: { color: '#f0eaf9' }
-        }
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#ffffff',
+      borderColor: '#e6def5',
+      borderWidth: 1,
+      padding: 10,
+      textStyle: { color: '#2c1a4a', fontSize: 13 },
+      extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
+      formatter: function(params) {
+        // 表头：浅灰色 + 间距
+        let html = '<div class="chart-tooltip">';
+        html += '<div class="tt-head"><span>时间</span><span>涨幅</span></div>';
+        params.forEach(p => {
+          const val = p.value;
+          const color = (val !== null && val !== undefined && val > 0) ? '#e94e9b' : '#999999';
+          const valText = (val === null || val === undefined) ? '-' : (val > 0 ? '+' + val : val);
+          html += '<div class="tt-row">';
+          html += `<span class="tt-dot" style="background:${color}"></span>`;
+          html += `<span class="tt-date">${p.seriesName}</span>`;
+          html += `<span class="tt-val" style="color:${color}">${valText}</span>`;
+          html += '</div>';
+        });
+        html += '</div>';
+        return html;
       }
-    }
-  });
+    },
+    legend: {
+      data: legendData,
+      top: 0,
+      left: 'center',          // 图例居中
+      icon: 'circle',          // 实心圆
+      itemWidth: 8,
+      itemHeight: 8,
+      itemGap: 16,
+      textStyle: { fontSize: 12, color: '#2c1a4a' }
+    },
+    grid: {
+      left: 48,
+      right: 24,
+      top: 48,
+      bottom: 32
+    },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#e6def5' } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#7a6a92',
+        fontSize: 12,
+        interval: function(index) { return index % 3 === 0 || index === 24; }
+      },
+      splitLine: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#7a6a92',
+        fontSize: 12,
+        formatter: function(value) { return value < 0 ? 0 : value.toLocaleString('zh-CN'); }
+      },
+      splitLine: { lineStyle: { color: '#f0eaf9' } }
+    },
+    series: series
+  };
+
+  chartInstance.setOption(option);
 }
 
 function render(records) {
@@ -463,7 +429,7 @@ function render(records) {
 
   const vRes = formatChange(todayVoteChange);
   const rRes = formatChange(todayRankChange);
-  
+
   const elVote = document.getElementById("todayVoteChange");
   elVote.innerText = vRes.text;
   elVote.className = "value " + vRes.cls;
@@ -488,7 +454,6 @@ function render(records) {
   tbody.innerHTML = rowsDesc.map(r => {
     const rankRes = formatChange(r["排名变化"]);
     const voteRes = formatChange(r["票数涨幅"]);
-    // 时间格式化显示为MM-DD HH:mm
     const timeStr = r["时间"] ? r["时间"].substring(5, 16) : "-";
     return `<tr>
       <td>${timeStr}</td>
