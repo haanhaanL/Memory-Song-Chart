@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>mzc052</title>
+<style>
+  :root {
+    --primary: #9f68e9;
+    --primary-dark: #6a38b0;
+    --bg: #f7f4fc;
+    --text: #2c1a4a;
+    --muted: #7a6a92;
+    --border: #e6def5;
+    --up: #2e9e5b;
+    --down: #d33b3b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    font-family: -apple-system, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    color: var(--primary-dark);
+    letter-spacing: 1px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  /* 今日涨幅卡片 */
+  .today-card {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 24px rgba(106, 56, 176, 0.22);
+  }
+  .today-card .label {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-bottom: 6px;
+  }
+  .today-card .value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .today-card .value small {
+    font-size: 15px;
+    font-weight: 500;
+    opacity: 0.85;
+    margin-left: 6px;
+  }
+
+  /* 表格 */
+  .table-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(106, 56, 176, 0.06);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  thead th {
+    background: #f2ecfb;
+    color: var(--primary-dark);
+    font-weight: 600;
+    text-align: left;
+    padding: 13px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 12px 16px;
+    border-top: 1px solid #f0eaf9;
+    white-space: nowrap;
+  }
+  tbody tr:nth-child(even) { background: #fcfaff; }
+  tbody tr:hover { background: #f5efff; }
+
+  .rank { font-weight: 700; color: var(--primary-dark); }
+  .rank-change { font-size: 12px; margin-left: 6px; font-weight: 600; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .flat { color: var(--muted); }
+
+  .votes { font-variant-numeric: tabular-nums; }
+  .change { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>mzc052</h1>
+  <div class="subtitle">《阴天也会有烦恼吗》· TF_ING穆祉丞 · 榜单追踪</div>
+
+  <div class="today-card">
+    <div class="label">今日票数涨幅（00:00 至当前）</div>
+    <div class="value" id="todayChange">--<small>票</small></div>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>排名</th>
+          <th>总票数</th>
+          <th>涨幅</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="4" class="empty">加载中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const CSV_FILE = "song_rank_history.csv";
+
+// 如果 CSV 读取失败，用这行数据兜底演示
+const FALLBACK = [
+  { 时间: "2026-11-24 13:05:50", 排名: "147", 总票数: "46347", 较上次票数涨幅: "0" }
+];
+
+// 简单 CSV 解析（支持双引号包裹）
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else inQuotes = false;
+      } else cell += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(cell); cell = ""; }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ""; }
+      else if (ch === '\r') { /* skip */ }
+      else cell += ch;
+    }
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.length && r.some(c => c.trim() !== ""));
+}
+
+function fmtChange(n) {
+  n = Number(n) || 0;
+  if (n > 0) return { text: "+" + n, cls: "up" };
+  if (n < 0) return { text: String(n), cls: "down" };
+  return { text: "0", cls: "flat" };
+}
+
+function fmtNum(n) {
+  return Number(n || 0).toLocaleString("zh-CN");
+}
+
+function render(records) {
+  // 时间升序
+  records.sort((a, b) => a["时间"].localeCompare(b["时间"]));
+
+  // 计算今日涨幅：今天 00:00 第一条 vs 今天最后一条
+  const todayStr = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
+  const todayRecords = records.filter(r => r["时间"].startsWith(todayStr));
+  let todayChange = 0;
+  if (todayRecords.length >= 2) {
+    const first = Number(todayRecords[0]["总票数"]) || 0;
+    const last = Number(todayRecords[todayRecords.length - 1]["总票数"]) || 0;
+    todayChange = last - first;
+  } else if (records.length >= 2) {
+    // 如果今天只有一条，退而求其次展示最近一条 vs 上一条
+    const last = records[records.length - 1];
+    const prev = records[records.length - 2];
+    todayChange = (Number(last["总票数"]) || 0) - (Number(prev["总票数"]) || 0);
+  }
+
+  const tc = fmtChange(todayChange);
+  document.getElementById("todayChange").innerHTML =
+    `<span class="${tc.cls}" style="color:#fff">${tc.text}</span><small>票</small>`;
+
+  // 表格（倒序，最新在上）
+  const tbody = document.getElementById("tbody");
+  const rowsDesc = [...records].reverse();
+  if (!rowsDesc.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">暂无数据</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rowsDesc.map(r => {
+    const rankChange = Number(r["较上次排名变化"] || 0);
+    const rc = rankChange > 0
+      ? `<span class="rank-change up">↑${rankChange}</span>`
+      : rankChange < 0
+        ? `<span class="rank-change down">↓${Math.abs(rankChange)}</span>`
+        : `<span class="rank-change flat">-</span>`;
+    const voteChange = Number(r["较上次票数涨幅"] || 0);
+    const vc = fmtChange(voteChange);
+    return `<tr>
+      <td>${r["时间"] || ""}</td>
+      <td><span class="rank">${r["排名"] || "-"}</span>${rc}</td>
+      <td class="votes">${fmtNum(r["总票数"])}</td>
+      <td class="change ${vc.cls}">${vc.text}</td>
+    </tr>`;
+  }).join("");
+}
+
+fetch(CSV_FILE)
+  .then(res => {
+    if (!res.ok) throw new Error("CSV 不存在");
+    return res.text();
+  })
+  .then(text => {
+    const rows = parseCSV(text);
+    if (rows.length < 2) throw new Error("CSV 无数据");
+    const headers = rows[0].map(h => h.trim());
+    const records = rows.slice(1).map(r => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (r[i] || "").trim());
+      return obj;
+    }).filter(r => r["时间"]);
+    render(records);
+  })
+  .catch(() => {
+    // 兜底演示
+    render(FALLBACK);
+  });
+</script>
+</body>
+</html>
