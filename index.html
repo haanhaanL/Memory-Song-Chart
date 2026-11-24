@@ -445,7 +445,7 @@ function render(records) {
   elRank.innerText = rRes.text;
   elRank.className = "value " + rRes.cls;
 
-  // 距top100票差：显示 票差 / 与上一时段差值
+  // 距top100票差：显示 票差 (与上一时段差值)，整体橙色
   const latestRecord = records[records.length - 1];
   const prevRecord = records.length >= 2 ? records[records.length - 2] : null;
   const elDistance = document.getElementById("todayDistanceTo100");
@@ -453,18 +453,16 @@ function render(records) {
   if (distanceTo100 !== undefined && distanceTo100 !== null && distanceTo100 !== "") {
     const currVal = Number(distanceTo100);
     let diffText = "";
-    let diffCls = "gray-text";
     if (prevRecord && prevRecord["距top100票数差"] !== undefined && prevRecord["距top100票数差"] !== null && prevRecord["距top100票数差"] !== "") {
       const prevVal = Number(prevRecord["距top100票数差"]);
       const diff = currVal - prevVal;
-      if (diff > 0) { diffText = `+${diff}`; diffCls = "gray-text"; }
-      else if (diff < 0) { diffText = `${diff}`; diffCls = "pink-text"; }
-      else { diffText = "0"; diffCls = "gray-text"; }
+      if (diff > 0) { diffText = ` (+${diff})`; }
+      else if (diff < 0) { diffText = ` (${diff})`; }
+      else { diffText = " (0)"; }
     } else {
-      diffText = "-";
-      diffCls = "gray-text";
+      diffText = " (-)";
     }
-    elDistance.innerHTML = `${fmtNum(currVal)} / <span class="${diffCls}">${diffText}</span>`;
+    elDistance.innerText = `${fmtNum(currVal)}${diffText}`;
     elDistance.className = "value orange-text";
   } else {
     elDistance.innerText = "-";
