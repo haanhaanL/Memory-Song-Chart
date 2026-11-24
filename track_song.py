@@ -81,22 +81,33 @@ def fetch_current_data():
     if "req_0" not in data or data["req_0"].get("code") != 0:
         raise Exception(f"接口返回异常: {data}")
         
-    # 注意：根据实际返回的 JSON 结构，字段名叫 list
     song_list = data["req_0"]["data"]["list"]
     
-    # 遍历列表，找到目标歌曲
+    current_rank = None
+    current_votes = None
+    rank_100_votes = None
+
+    # 遍历列表，找目标歌曲和第 100 名
     for item in song_list:
-        # 字段直接平铺在 item 里，没有 songInfo 包裹
+        # 找目标歌曲
         if SONG_NAME in item.get("name", ""):
-            rank = item.get("rank")
-            votes = item.get("score")
-            if rank is not None and votes is not None:
-                print(f"找到歌曲！排名: {rank}, 票数: {votes}")
-                return int(rank), int(votes)
-            else:
-                print(f"找到歌曲但字段缺失: {item}")
-            
-    raise Exception(f"在榜单中未找到《{SONG_NAME}》")
+            current_rank = item.get("rank")
+            current_votes = item.get("score")
+        
+        # 找第 100 名
+        if item.get("rank") == 100:
+            rank_100_votes = item.get("score")
+
+    if current_rank is None or current_votes is None:
+        raise Exception(f"在榜单中未找到《{SONG_NAME}》")
+        
+    if rank_100_votes is None:
+        raise Exception("在榜单中未找到第 100 名的数据")
+
+    print(f"找到歌曲！排名: {current_rank}, 票数: {current_votes}")
+    print(f"第 100 名票数: {rank_100_votes}")
+    
+    return int(current_rank), int(current_votes), int(rank_100_votes)
 
 # ================= 数据对比与保存 =================
 def get_history_records():
@@ -108,7 +119,8 @@ def get_history_records():
 
 def save_record(row_data):
     file_exists = os.path.exists(CSV_FILE)
-    fieldnames = ['时间', '排名', '总票数', '较上次排名变化', '较上次票数涨幅', '当日排名变化', '当日票数涨幅']
+    # 增加了新列 '距100名票数差'
+    fieldnames = ['时间', '排名', '总票数', '距100名票数差', '较上次排名变化', '较上次票数涨幅', '当日排名变化', '当日票数涨幅']
     
     with open(CSV_FILE, 'a', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -120,7 +132,7 @@ def main():
     print(f"开始获取《{SONG_NAME}》的数据...")
     
     try:
-        current_rank, current_votes = fetch_current_data()
+        current_rank, current_votes, rank_100_votes = fetch_current_data()
         
         # 强制使用北京时间
         now = datetime.now(BJ_TZ)
@@ -129,6 +141,9 @@ def main():
     except Exception as e:
         print(f"获取失败: {e}")
         return
+
+    # 计算与 100 名的票数差（如果排名>100，则差额为正数表示需要追赶的票数；如果已进前100，则为负数表示反超的票数）
+    diff_to_100 = rank_100_votes - current_votes
 
     records = get_history_records()
     
@@ -169,6 +184,7 @@ def main():
         '时间': now.strftime('%Y-%m-%d %H:%M:%S'),
         '排名': current_rank,
         '总票数': current_votes,
+        '距100名票数差': diff_to_100,
         '较上次排名变化': last_rank_change,
         '较上次票数涨幅': last_votes_change,
         '当日排名变化': daily_rank_change,
@@ -176,7 +192,7 @@ def main():
     }
 
     save_record(row_data)
-    print(f"数据已保存到 {CSV_FILE}")
+    print(f"数据已保存到 {CSV_FILE}，距100名差 {diff_to_100} 票")
 
 if __name__ == "__main__":
     main()
