@@ -74,6 +74,18 @@
     overflow: hidden;
   }
 
+  /* 两个表格并排容器 */
+  .tables-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .tables-row .table-card {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
   .table-header {
     font-size: 16px;
     font-weight: 600;
@@ -92,7 +104,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;        /* 表格文字统一 14px */
+    font-size: 14px;
     min-width: 400px;
     border: 1px solid var(--border);
   }
@@ -174,27 +186,37 @@
 
     .card { padding: 12px; }
 
+    /* 两个表格上下堆叠 */
+    .tables-row {
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tables-row .table-card {
+      flex: 1 1 auto;
+      width: 100%;
+    }
+
     .table-wrapper { margin: 0 -1px 8px; }
     table { min-width: 0; table-layout: fixed; }
     thead th, tbody td { white-space: normal; word-break: break-all; }
 
     /* 每小时表格（四列）列宽 */
-    .card:nth-of-type(1) thead th:nth-child(1),
-    .card:nth-of-type(1) tbody td:nth-child(1) { width: 30%; }
-    .card:nth-of-type(1) thead th:nth-child(2),
-    .card:nth-of-type(1) tbody td:nth-child(2) { width: 26%; }
-    .card:nth-of-type(1) thead th:nth-child(3),
-    .card:nth-of-type(1) tbody td:nth-child(3) { width: 24%; }
-    .card:nth-of-type(1) thead th:nth-child(4),
-    .card:nth-of-type(1) tbody td:nth-child(4) { width: 20%; }
+    .table-card:nth-of-type(1) thead th:nth-child(1),
+    .table-card:nth-of-type(1) tbody td:nth-child(1) { width: 30%; }
+    .table-card:nth-of-type(1) thead th:nth-child(2),
+    .table-card:nth-of-type(1) tbody td:nth-child(2) { width: 26%; }
+    .table-card:nth-of-type(1) thead th:nth-child(3),
+    .table-card:nth-of-type(1) tbody td:nth-child(3) { width: 24%; }
+    .table-card:nth-of-type(1) thead th:nth-child(4),
+    .table-card:nth-of-type(1) tbody td:nth-child(4) { width: 20%; }
 
     /* 每日表格（三列）列宽 */
-    .card:nth-of-type(2) thead th:nth-child(1),
-    .card:nth-of-type(2) tbody td:nth-child(1) { width: 34%; }
-    .card:nth-of-type(2) thead th:nth-child(2),
-    .card:nth-of-type(2) tbody td:nth-child(2) { width: 33%; }
-    .card:nth-of-type(2) thead th:nth-child(3),
-    .card:nth-of-type(2) tbody td:nth-child(3) { width: 33%; }
+    .table-card:nth-of-type(2) thead th:nth-child(1),
+    .table-card:nth-of-type(2) tbody td:nth-child(1) { width: 34%; }
+    .table-card:nth-of-type(2) thead th:nth-child(2),
+    .table-card:nth-of-type(2) tbody td:nth-child(2) { width: 33%; }
+    .table-card:nth-of-type(2) thead th:nth-child(3),
+    .table-card:nth-of-type(2) tbody td:nth-child(3) { width: 33%; }
 
     .chart-container { height: 260px; }
   }
@@ -223,42 +245,45 @@
     </div>
   </div>
 
-  <!-- 每小时数据表格 -->
-  <div class="card" style="padding: 0;">
-    <div class="table-header">每小时数据 · 近12条</div>
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>时间</th>
-            <th>排名</th>
-            <th>总票数</th>
-            <th>涨幅</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="4" class="empty">加载中...</td></tr>
-        </tbody>
-      </table>
+  <!-- 表格区域：PC 并排，移动端换行 -->
+  <div class="tables-row">
+    <!-- 每小时数据表格 -->
+    <div class="card table-card" style="padding: 0;">
+      <div class="table-header">每小时数据 · 近12条</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>排名</th>
+              <th>总票数</th>
+              <th>涨幅</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="4" class="empty">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
 
-  <!-- 每日数据表格 -->
-  <div class="card" style="padding: 0;">
-    <div class="table-header">每日数据</div>
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>时间</th>
-            <th>票数涨幅</th>
-            <th>排名涨幅</th>
-          </tr>
-        </thead>
-        <tbody id="dailyTbody">
-          <tr><td colspan="3" class="empty">加载中...</td></tr>
-        </tbody>
-      </table>
+    <!-- 每日数据表格 -->
+    <div class="card table-card" style="padding: 0;">
+      <div class="table-header">每日数据</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>票数涨幅</th>
+              <th>排名涨幅</th>
+            </tr>
+          </thead>
+          <tbody id="dailyTbody">
+            <tr><td colspan="3" class="empty">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
