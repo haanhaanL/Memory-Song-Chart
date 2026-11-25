@@ -207,11 +207,11 @@
     .table-card:nth-of-type(1) tbody td:nth-child(4) { width: 20%; }
 
     .table-card:nth-of-type(2) thead th:nth-child(1),
-    .table-card:nth-of-type(2) tbody td:nth-child(1) { width: 34%; }
+    .table-card:nth-of-type(2) tbody td:nth-child(1) { width: 30%; }
     .table-card:nth-of-type(2) thead th:nth-child(2),
-    .table-card:nth-of-type(2) tbody td:nth-child(2) { width: 33%; }
+    .table-card:nth-of-type(2) tbody td:nth-child(2) { width: 34%; }
     .table-card:nth-of-type(2) thead th:nth-child(3),
-    .table-card:nth-of-type(2) tbody td:nth-child(3) { width: 33%; }
+    .table-card:nth-of-type(2) tbody td:nth-child(3) { width: 36%; }
 
     .chart-container { height: 260px; }
   }
@@ -267,8 +267,8 @@
           <thead>
             <tr>
               <th>时间</th>
-              <th>票数涨幅</th>
-              <th>排名涨幅</th>
+              <th>排名</th>
+              <th>总票数</th>
             </tr>
           </thead>
           <tbody id="dailyTbody">
@@ -310,7 +310,6 @@ function parseCSV(text) {
   return rows.filter(r => r.length && r.some(c => c.trim() !== ""));
 }
 
-// 不依赖 toLocaleDateString 的本地日期 YYYY-MM-DD
 function getLocalDateStr(d) {
   const date = d || new Date();
   const y = date.getFullYear();
@@ -360,7 +359,13 @@ function buildDailyRecords(records) {
     const voteDiff = (Number(end["总票数"]) || 0) - (Number(start["总票数"]) || 0);
     const rankDiff = (Number(start["排名"]) || 0) - (Number(end["排名"]) || 0);
 
-    daily.push({ date, voteDiff, rankDiff });
+    daily.push({
+      date,
+      totalVotes: Number(end["总票数"]) || 0,
+      totalRank: Number(end["排名"]) || 0,
+      voteDiff,
+      rankDiff
+    });
   });
 
   return daily;
@@ -525,10 +530,12 @@ function renderDaily(daily) {
   tbody.innerHTML = rowsDesc.map(d => {
     const voteRes = formatChange(d.voteDiff);
     const rankRes = formatChange(d.rankDiff);
+    const rankText = `<span class="rank">${d.totalRank || "-"}</span> / <span class="${rankRes.cls}">${rankRes.text}</span>`;
+    const voteText = `${fmtNum(d.totalVotes)} / <span class="${voteRes.cls}">${voteRes.text}</span>`;
     return `<tr>
       <td>${d.date.substring(5)}</td>
-      <td class="votes ${voteRes.cls}">${voteRes.text}</td>
-      <td class="votes ${rankRes.cls}">${rankRes.text}</td>
+      <td>${rankText}</td>
+      <td class="votes">${voteText}</td>
     </tr>`;
   }).join("");
 }
@@ -543,9 +550,7 @@ function render(records) {
   records.sort((a, b) => a["时间"].localeCompare(b["时间"]));
 
   const todayStr = getLocalDateStr();
-  // 按日期前缀匹配今日记录；若 CSV 时间格式是 YYYY-MM-DD HH:mm 则直接命中
   let todayRecords = records.filter(r => r["时间"].startsWith(todayStr));
-  // 兜底：若今日无记录，取最后一天的记录作为“今日”
   if (todayRecords.length === 0) {
     const lastDate = records[records.length - 1]["时间"].split(" ")[0];
     todayRecords = records.filter(r => r["时间"].startsWith(lastDate));
