@@ -16,6 +16,7 @@
     --pink: #e94e9b;
     --gray: #999999;
     --orange: #ff7e00;
+    --theme: #AE72FF;
   }
   * { box-sizing: border-box; }
   body {
@@ -41,26 +42,28 @@
     text-align: center;
   }
 
+  /* 顶部卡片：文字小一点、不加粗，数字加粗 */
   .today-card {
     background: #fdfcff;
     border: 1px solid var(--primary-dark);
     border-radius: 14px;
-    padding: 16px 24px;
+    padding: 14px 20px;
     margin-bottom: 24px;
     box-shadow: 0 4px 12px rgba(106, 56, 176, 0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 400;
   }
   .today-left { display: flex; align-items: center; gap: 16px; }
   .today-item { display: flex; align-items: center; gap: 8px; }
-  .today-item .label { color: var(--text); }
-  .today-item .value { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+  .today-item .label { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .today-item .value { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
   .divider { color: var(--primary-dark); opacity: 0.4; font-weight: normal; margin: 0 8px; }
   .today-right { display: flex; align-items: center; gap: 8px; color: var(--text); }
-  .today-right .value { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+  .today-right .label { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .today-right .value { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
 
   .card {
     background: #fff;
@@ -161,16 +164,30 @@
   .chart-tooltip .tt-date { width: 96px; }
   .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
 
+  /* 移动端：表格自适应，字号缩小，允许横向滚动 */
   @media (max-width: 600px) {
     body { padding: 20px 12px 48px; }
     h1 { font-size: 24px; }
-    .today-card { flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; }
-    .today-left { flex-direction: column; align-items: stretch; gap: 12px; width: 100%; }
-    .today-item, .today-right { display: flex; justify-content: space-between; width: 100%; }
+
+    .today-card { flex-direction: column; align-items: stretch; padding: 12px 14px; gap: 10px; }
+    .today-left { flex-direction: column; align-items: stretch; gap: 10px; width: 100%; }
+    .today-item, .today-right { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .today-item .label, .today-right .label { font-size: 12px; }
+    .today-item .value, .today-right .value { font-size: 16px; }
     .divider { display: none; }
+
     .card { padding: 12px; }
+    .table-header { padding: 12px 12px 10px; font-size: 15px; }
+
+    .table-wrapper { margin: 0 -1px 8px; }
+    table { min-width: 0; font-size: 13px; table-layout: fixed; }
+    thead th, tbody td { padding: 9px 8px; font-size: 12px; white-space: normal; word-break: break-all; }
+    thead th:nth-child(1), tbody td:nth-child(1) { width: 30%; }
+    thead th:nth-child(2), tbody td:nth-child(2) { width: 26%; }
+    thead th:nth-child(3), tbody td:nth-child(3) { width: 24%; }
+    thead th:nth-child(4), tbody td:nth-child(4) { width: 20%; }
+
     .chart-container { height: 260px; }
-    thead th, tbody td { padding: 10px 12px; font-size: 14px; }
     .chart-tooltip { min-width: 150px; }
     .chart-tooltip .tt-head span:first-child,
     .chart-tooltip .tt-date { width: 84px; }
@@ -298,15 +315,15 @@ function renderChart(records) {
     }
 
     let lineColor = "#999999";
-    let lineWidth = 2;
+    let lineWidth = 1.2;
     let lineType = 'dashed';
 
     if (date === todayStr) {
-      lineColor = "#e94e9b"; lineWidth = 3; lineType = 'solid';
+      lineColor = "#AE72FF"; lineWidth = 1.6; lineType = 'solid';
     } else if (date === yesterday) {
-      lineColor = "#9f68e9"; lineWidth = 2; lineType = 'solid';
+      lineColor = "#cfacff"; lineWidth = 1.2; lineType = 'solid';
     } else {
-      const opacity = 0.3 + (index * 0.1);
+      const opacity = 0.25 + (index * 0.08);
       lineColor = `rgba(150, 150, 150, ${opacity})`;
     }
 
@@ -314,8 +331,8 @@ function renderChart(records) {
     for (let h = 0; h <= 24; h++) {
       if (hourData[h] !== undefined && hourData[h] > 0) { hasPositive = true; break; }
     }
-    if (hasPositive && date !== yesterday) {
-      lineColor = "#e94e9b"; lineType = 'solid';
+    if (hasPositive && date !== yesterday && date !== todayStr) {
+      lineColor = "rgba(174, 114, 255, 0.5)"; lineType = 'solid';
     }
 
     const labelDate = date.substring(5);
@@ -324,11 +341,11 @@ function renderChart(records) {
       name: labelDate,
       type: 'line',
       data: data,
-      smooth: false,               // 折线改为直线
+      smooth: false,
       connectNulls: false,
       showSymbol: true,
       symbol: 'circle',
-      symbolSize: 6,
+      symbolSize: 5,
       itemStyle: { color: lineColor, borderWidth: 0 },
       lineStyle: { color: lineColor, width: lineWidth, type: lineType }
     });
