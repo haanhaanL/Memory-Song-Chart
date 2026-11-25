@@ -42,7 +42,6 @@
     text-align: center;
   }
 
-  /* 顶部卡片：文字小一点、不加粗，数字加粗 */
   .today-card {
     background: #fdfcff;
     border: 1px solid var(--primary-dark);
@@ -93,7 +92,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 15px;
+    font-size: 14px;        /* 表格文字统一 14px */
     min-width: 400px;
     border: 1px solid var(--border);
   }
@@ -164,33 +163,40 @@
   .chart-tooltip .tt-date { width: 96px; }
   .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
 
-  /* 移动端：表格自适应，字号缩小，允许横向滚动 */
+  /* 移动端：仅调整布局，字号与 PC 端一致 */
   @media (max-width: 600px) {
     body { padding: 20px 12px 48px; }
-    h1 { font-size: 24px; }
 
-    .today-card { flex-direction: column; align-items: stretch; padding: 12px 14px; gap: 10px; }
-    .today-left { flex-direction: column; align-items: stretch; gap: 10px; width: 100%; }
+    .today-card { flex-direction: column; align-items: stretch; padding: 14px 20px; gap: 12px; }
+    .today-left { flex-direction: column; align-items: stretch; gap: 12px; width: 100%; }
     .today-item, .today-right { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-    .today-item .label, .today-right .label { font-size: 12px; }
-    .today-item .value, .today-right .value { font-size: 16px; }
     .divider { display: none; }
 
     .card { padding: 12px; }
-    .table-header { padding: 12px 12px 10px; font-size: 15px; }
 
     .table-wrapper { margin: 0 -1px 8px; }
-    table { min-width: 0; font-size: 13px; table-layout: fixed; }
-    thead th, tbody td { padding: 9px 8px; font-size: 12px; white-space: normal; word-break: break-all; }
-    thead th:nth-child(1), tbody td:nth-child(1) { width: 30%; }
-    thead th:nth-child(2), tbody td:nth-child(2) { width: 26%; }
-    thead th:nth-child(3), tbody td:nth-child(3) { width: 24%; }
-    thead th:nth-child(4), tbody td:nth-child(4) { width: 20%; }
+    table { min-width: 0; table-layout: fixed; }
+    thead th, tbody td { white-space: normal; word-break: break-all; }
+
+    /* 每小时表格（四列）列宽 */
+    .card:nth-of-type(1) thead th:nth-child(1),
+    .card:nth-of-type(1) tbody td:nth-child(1) { width: 30%; }
+    .card:nth-of-type(1) thead th:nth-child(2),
+    .card:nth-of-type(1) tbody td:nth-child(2) { width: 26%; }
+    .card:nth-of-type(1) thead th:nth-child(3),
+    .card:nth-of-type(1) tbody td:nth-child(3) { width: 24%; }
+    .card:nth-of-type(1) thead th:nth-child(4),
+    .card:nth-of-type(1) tbody td:nth-child(4) { width: 20%; }
+
+    /* 每日表格（三列）列宽 */
+    .card:nth-of-type(2) thead th:nth-child(1),
+    .card:nth-of-type(2) tbody td:nth-child(1) { width: 34%; }
+    .card:nth-of-type(2) thead th:nth-child(2),
+    .card:nth-of-type(2) tbody td:nth-child(2) { width: 33%; }
+    .card:nth-of-type(2) thead th:nth-child(3),
+    .card:nth-of-type(2) tbody td:nth-child(3) { width: 33%; }
 
     .chart-container { height: 260px; }
-    .chart-tooltip { min-width: 150px; }
-    .chart-tooltip .tt-head span:first-child,
-    .chart-tooltip .tt-date { width: 84px; }
   }
 </style>
 </head>
@@ -217,7 +223,7 @@
     </div>
   </div>
 
-  <!-- 表格 -->
+  <!-- 每小时数据表格 -->
   <div class="card" style="padding: 0;">
     <div class="table-header">每小时数据 · 近12条</div>
     <div class="table-wrapper">
@@ -232,6 +238,25 @@
         </thead>
         <tbody id="tbody">
           <tr><td colspan="4" class="empty">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 每日数据表格 -->
+  <div class="card" style="padding: 0;">
+    <div class="table-header">每日数据</div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>票数涨幅</th>
+            <th>排名涨幅</th>
+          </tr>
+        </thead>
+        <tbody id="dailyTbody">
+          <tr><td colspan="3" class="empty">加载中...</td></tr>
         </tbody>
       </table>
     </div>
@@ -279,6 +304,42 @@ function formatChange(n, defaultVal = "-") {
 function fmtNum(n) {
   if (n === undefined || n === null || n === "") return "-";
   return Number(n).toLocaleString("zh-CN");
+}
+
+// 计算每日涨幅：次日0点 - 当天0点；缺失时用范围内最早/最晚
+function buildDailyRecords(records) {
+  const byDate = {};
+  records.forEach(r => {
+    const date = r["时间"].split(" ")[0];
+    if (!byDate[date]) byDate[date] = [];
+    byDate[date].push(r);
+  });
+
+  const dates = Object.keys(byDate).sort();
+  const daily = [];
+
+  dates.forEach((date, i) => {
+    const list = byDate[date].slice().sort((a, b) => a["时间"].localeCompare(b["时间"]));
+    if (list.length === 0) return;
+
+    let start = list.find(r => r["时间"].startsWith(date + " 00:00"));
+    if (!start) start = list[0];
+
+    let end = null;
+    const nextDate = dates[i + 1];
+    if (nextDate) {
+      const nextList = byDate[nextDate];
+      end = nextList.find(r => r["时间"].startsWith(nextDate + " 00:00")) || null;
+    }
+    if (!end) end = list[list.length - 1];
+
+    const voteDiff = (Number(end["总票数"]) || 0) - (Number(start["总票数"]) || 0);
+    const rankDiff = (Number(start["排名"]) || 0) - (Number(end["排名"]) || 0);
+
+    daily.push({ date, voteDiff, rankDiff });
+  });
+
+  return daily;
 }
 
 let chartInstance = null;
@@ -426,9 +487,29 @@ function renderChart(records) {
   chartInstance.setOption(option);
 }
 
+function renderDaily(daily) {
+  const tbody = document.getElementById("dailyTbody");
+  if (!daily || daily.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="empty">-</td></tr>`;
+    return;
+  }
+
+  const rowsDesc = [...daily].reverse();
+  tbody.innerHTML = rowsDesc.map(d => {
+    const voteRes = formatChange(d.voteDiff);
+    const rankRes = formatChange(d.rankDiff);
+    return `<tr>
+      <td>${d.date.substring(5)}</td>
+      <td class="votes ${voteRes.cls}">${voteRes.text}</td>
+      <td class="votes ${rankRes.cls}">${rankRes.text}</td>
+    </tr>`;
+  }).join("");
+}
+
 function render(records) {
   if (!records || records.length === 0) {
     document.getElementById("tbody").innerHTML = `<tr><td colspan="4" class="empty">-</td></tr>`;
+    document.getElementById("dailyTbody").innerHTML = `<tr><td colspan="3" class="empty">-</td></tr>`;
     return;
   }
 
@@ -462,7 +543,6 @@ function render(records) {
   elRank.innerText = rRes.text;
   elRank.className = "value " + rRes.cls;
 
-  // 距top100票差：显示 票差 (与上一时段差值)，整体橙色
   const latestRecord = records[records.length - 1];
   const prevRecord = records.length >= 2 ? records[records.length - 2] : null;
   const elDistance = document.getElementById("todayDistanceTo100");
@@ -499,6 +579,9 @@ function render(records) {
       <td class="change ${voteRes.cls}">${voteRes.text}</td>
     </tr>`;
   }).join("");
+
+  const daily = buildDailyRecords(records);
+  renderDaily(daily);
 
   renderChart(records);
 }
