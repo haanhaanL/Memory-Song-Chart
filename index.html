@@ -74,7 +74,6 @@
     overflow: hidden;
   }
 
-  /* 两个表格并排容器 */
   .tables-row {
     display: flex;
     gap: 16px;
@@ -175,7 +174,6 @@
   .chart-tooltip .tt-date { width: 96px; }
   .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
 
-  /* 移动端：仅调整布局，字号与 PC 端一致 */
   @media (max-width: 600px) {
     body { padding: 20px 12px 48px; }
 
@@ -186,7 +184,6 @@
 
     .card { padding: 12px; }
 
-    /* 两个表格上下堆叠 */
     .tables-row {
       flex-direction: column;
       gap: 16px;
@@ -200,7 +197,6 @@
     table { min-width: 0; table-layout: fixed; }
     thead th, tbody td { white-space: normal; word-break: break-all; }
 
-    /* 每小时表格（四列）列宽 */
     .table-card:nth-of-type(1) thead th:nth-child(1),
     .table-card:nth-of-type(1) tbody td:nth-child(1) { width: 30%; }
     .table-card:nth-of-type(1) thead th:nth-child(2),
@@ -210,7 +206,6 @@
     .table-card:nth-of-type(1) thead th:nth-child(4),
     .table-card:nth-of-type(1) tbody td:nth-child(4) { width: 20%; }
 
-    /* 每日表格（三列）列宽 */
     .table-card:nth-of-type(2) thead th:nth-child(1),
     .table-card:nth-of-type(2) tbody td:nth-child(1) { width: 34%; }
     .table-card:nth-of-type(2) thead th:nth-child(2),
@@ -245,9 +240,7 @@
     </div>
   </div>
 
-  <!-- 表格区域：PC 并排，移动端换行 -->
   <div class="tables-row">
-    <!-- 每小时数据表格 -->
     <div class="card table-card" style="padding: 0;">
       <div class="table-header">每小时数据 · 近12条</div>
       <div class="table-wrapper">
@@ -267,7 +260,6 @@
       </div>
     </div>
 
-    <!-- 每日数据表格 -->
     <div class="card table-card" style="padding: 0;">
       <div class="table-header">每日数据</div>
       <div class="table-wrapper">
@@ -287,7 +279,6 @@
     </div>
   </div>
 
-  <!-- 图表 -->
   <div class="card">
     <div class="chart-header">票数涨幅</div>
     <div class="chart-container" id="trendChart"></div>
@@ -331,7 +322,6 @@ function fmtNum(n) {
   return Number(n).toLocaleString("zh-CN");
 }
 
-// 计算每日涨幅：次日0点 - 当天0点；缺失时用范围内最早/最晚
 function buildDailyRecords(records) {
   const byDate = {};
   records.forEach(r => {
@@ -392,6 +382,7 @@ function renderChart(records) {
   const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("sv-SE");
   const series = [];
   const legendData = [];
+  const seriesColorMap = {}; // 记录每个系列的颜色，供 tooltip 使用
 
   dates.forEach((date, index) => {
     const hourData = byDate[date];
@@ -405,7 +396,7 @@ function renderChart(records) {
     let lineType = 'dashed';
 
     if (date === todayStr) {
-      lineColor = "#AE72FF"; lineWidth = 1.6; lineType = 'solid';
+      lineColor = "#e94e9b"; lineWidth = 1.6; lineType = 'solid';
     } else if (date === yesterday) {
       lineColor = "#cfacff"; lineWidth = 1.2; lineType = 'solid';
     } else {
@@ -423,6 +414,7 @@ function renderChart(records) {
 
     const labelDate = date.substring(5);
     legendData.push(labelDate);
+    seriesColorMap[labelDate] = lineColor;
     series.push({
       name: labelDate,
       type: 'line',
@@ -447,11 +439,13 @@ function renderChart(records) {
       textStyle: { color: '#2c1a4a', fontSize: 13 },
       extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
       formatter: function(params) {
+        // 倒序显示：后添加的系列先显示
+        const reversed = params.slice().reverse();
         let html = '<div class="chart-tooltip">';
         html += '<div class="tt-head"><span>时间</span><span>涨幅</span></div>';
-        params.forEach(p => {
+        reversed.forEach(p => {
           const val = p.value;
-          const color = (val !== null && val !== undefined && val > 0) ? '#e94e9b' : '#999999';
+          const color = seriesColorMap[p.seriesName] || '#999999';
           const valText = (val === null || val === undefined) ? '-' : (val > 0 ? '+' + val : val);
           const hourLabel = labels[p.dataIndex];
           const timeText = `${p.seriesName} ${hourLabel}`;
