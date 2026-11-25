@@ -103,7 +103,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 12px;
     min-width: 400px;
     border: 1px solid var(--border);
   }
@@ -112,12 +112,12 @@
     color: #ffffff;
     font-weight: 600;
     text-align: left;
-    padding: 13px 16px;
-    font-size: 14px;
+    padding: 11px 12px;
+    font-size: 12px;
     white-space: nowrap;
   }
   tbody td {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-top: 1px solid #f0eaf9;
     white-space: nowrap;
   }
@@ -195,21 +195,24 @@
 
     .table-wrapper { margin: 0 -1px 8px; }
     table { min-width: 0; table-layout: fixed; }
-    thead th, tbody td { white-space: normal; word-break: break-all; }
+    thead th { padding: 9px 6px; }
+    tbody td { padding: 9px 6px; white-space: normal; word-break: break-all; }
+
+    thead th:nth-child(1), tbody td:nth-child(1) { white-space: nowrap; }
 
     .table-card:nth-of-type(1) thead th:nth-child(1),
-    .table-card:nth-of-type(1) tbody td:nth-child(1) { width: 30%; }
+    .table-card:nth-of-type(1) tbody td:nth-child(1) { width: 28%; }
     .table-card:nth-of-type(1) thead th:nth-child(2),
     .table-card:nth-of-type(1) tbody td:nth-child(2) { width: 26%; }
     .table-card:nth-of-type(1) thead th:nth-child(3),
     .table-card:nth-of-type(1) tbody td:nth-child(3) { width: 24%; }
     .table-card:nth-of-type(1) thead th:nth-child(4),
-    .table-card:nth-of-type(1) tbody td:nth-child(4) { width: 20%; }
+    .table-card:nth-of-type(1) tbody td:nth-child(4) { width: 22%; }
 
     .table-card:nth-of-type(2) thead th:nth-child(1),
-    .table-card:nth-of-type(2) tbody td:nth-child(1) { width: 30%; }
+    .table-card:nth-of-type(2) tbody td:nth-child(1) { width: 28%; }
     .table-card:nth-of-type(2) thead th:nth-child(2),
-    .table-card:nth-of-type(2) tbody td:nth-child(2) { width: 34%; }
+    .table-card:nth-of-type(2) tbody td:nth-child(2) { width: 36%; }
     .table-card:nth-of-type(2) thead th:nth-child(3),
     .table-card:nth-of-type(2) tbody td:nth-child(3) { width: 36%; }
 
