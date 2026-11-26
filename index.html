@@ -401,7 +401,10 @@ function renderChart(records) {
   const legendData = [];
   const seriesColorMap = {};
 
-  dates.forEach((date, index) => {
+  // 倒序遍历日期，让图例倒序（最新在前）
+  const orderedDates = dates.slice().reverse();
+
+  orderedDates.forEach((date, index) => {
     const hourData = byDate[date];
     const data = [];
     for (let h = 0; h <= 24; h++) {
@@ -410,23 +413,14 @@ function renderChart(records) {
 
     let lineColor = "#999999";
     let lineWidth = 1.2;
-    let lineType = 'dashed';
+    let lineType = 'solid';
 
     if (date === todayStr) {
       lineColor = "#e94e9b"; lineWidth = 1.6; lineType = 'solid';
     } else if (date === yesterday) {
       lineColor = "#cfacff"; lineWidth = 1.2; lineType = 'solid';
     } else {
-      const opacity = 0.25 + (index * 0.08);
-      lineColor = `rgba(150, 150, 150, ${opacity})`;
-    }
-
-    let hasPositive = false;
-    for (let h = 0; h <= 24; h++) {
-      if (hourData[h] !== undefined && hourData[h] > 0) { hasPositive = true; break; }
-    }
-    if (hasPositive && date !== yesterday && date !== todayStr) {
-      lineColor = "rgba(174, 114, 255, 0.5)"; lineType = 'solid';
+      lineColor = "#999999"; lineWidth = 1; lineType = 'solid';
     }
 
     const labelDate = date.substring(5);
@@ -440,7 +434,7 @@ function renderChart(records) {
       connectNulls: false,
       showSymbol: true,
       symbol: 'circle',
-      symbolSize: 5,
+      symbolSize: 3,
       itemStyle: { color: lineColor, borderWidth: 0 },
       lineStyle: { color: lineColor, width: lineWidth, type: lineType }
     });
@@ -483,7 +477,13 @@ function renderChart(records) {
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 16,
-      textStyle: { fontSize: 12, color: '#2c1a4a' }
+      textStyle: { fontSize: 12, color: '#2c1a4a' },
+      formatter: function(name) {
+        // 图例文字：今日/昨日显示日期，其余统一“近7日”
+        if (name === todayStr.substring(5)) return name;
+        if (name === yesterday.substring(5)) return name;
+        return '近7日';
+      }
     },
     grid: {
       left: 48,
