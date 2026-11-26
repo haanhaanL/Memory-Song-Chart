@@ -450,10 +450,13 @@ function renderChart(records) {
       textStyle: { color: '#2c1a4a', fontSize: 13 },
       extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
       formatter: function(params) {
-        const reversed = params.slice().reverse();
+        // 按时间倒序：先按 seriesName（MM-DD）倒序，再输出
+        const sorted = params.slice().sort((a, b) => {
+          return b.seriesName.localeCompare(a.seriesName);
+        });
         let html = '<div class="chart-tooltip">';
         html += '<div class="tt-head"><span>时间</span><span>涨幅</span></div>';
-        reversed.forEach(p => {
+        sorted.forEach(p => {
           const val = p.value;
           const color = seriesColorMap[p.seriesName] || '#999999';
           const valText = (val === null || val === undefined) ? '-' : (val > 0 ? '+' + val : val);
@@ -479,7 +482,6 @@ function renderChart(records) {
       itemGap: 16,
       textStyle: { fontSize: 12, color: '#2c1a4a' },
       formatter: function(name) {
-        // 图例文字：今日/昨日显示日期，其余统一“近7日”
         if (name === todayStr.substring(5)) return name;
         if (name === yesterday.substring(5)) return name;
         return '近7日';
