@@ -238,7 +238,7 @@
       </div>
     </div>
     <div class="today-right">
-      <span class="label">距top100票差</span>
+      <span class="label" id="distanceLabel">距top100票差</span>
       <span class="value" id="todayDistanceTo100">-</span>
     </div>
   </div>
@@ -401,7 +401,6 @@ function renderChart(records) {
   const legendData = [];
   const seriesColorMap = {};
 
-  // 倒序遍历日期，让图例倒序（最新在前）
   const orderedDates = dates.slice().reverse();
 
   orderedDates.forEach((date, index) => {
@@ -450,7 +449,6 @@ function renderChart(records) {
       textStyle: { color: '#2c1a4a', fontSize: 13 },
       extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
       formatter: function(params) {
-        // 按时间倒序：先按 seriesName（MM-DD）倒序，再输出
         const sorted = params.slice().sort((a, b) => {
           return b.seriesName.localeCompare(a.seriesName);
         });
@@ -587,15 +585,23 @@ function render(records) {
   elRank.innerText = rRes.text;
   elRank.className = "value " + rRes.cls;
 
+  // 距top100票差 / 与top100票差（100内取绝对值显示正数）
   const latestRecord = records[records.length - 1];
   const prevRecord = records.length >= 2 ? records[records.length - 2] : null;
   const elDistance = document.getElementById("todayDistanceTo100");
+  const labelEl = document.getElementById("distanceLabel");
   const distanceTo100 = latestRecord["距top100票数差"];
+  const latestRank = Number(latestRecord["排名"]) || 0;
+  const isInsideTop100 = latestRank > 0 && latestRank <= 100;
+
   if (distanceTo100 !== undefined && distanceTo100 !== null && distanceTo100 !== "") {
-    const currVal = Number(distanceTo100);
+    const rawCurr = Number(distanceTo100);
+    const currVal = isInsideTop100 ? Math.abs(rawCurr) : rawCurr;
+
     let diffText = "";
     if (prevRecord && prevRecord["距top100票数差"] !== undefined && prevRecord["距top100票数差"] !== null && prevRecord["距top100票数差"] !== "") {
-      const prevVal = Number(prevRecord["距top100票数差"]);
+      const rawPrev = Number(prevRecord["距top100票数差"]);
+      const prevVal = isInsideTop100 ? Math.abs(rawPrev) : rawPrev;
       const diff = currVal - prevVal;
       if (diff > 0) { diffText = ` (+${diff})`; }
       else if (diff < 0) { diffText = ` (${diff})`; }
@@ -603,9 +609,12 @@ function render(records) {
     } else {
       diffText = " (-)";
     }
+
+    labelEl.innerText = isInsideTop100 ? "与top100票差" : "距top100票差";
     elDistance.innerText = `${fmtNum(currVal)}${diffText}`;
     elDistance.className = "value orange-text";
   } else {
+    labelEl.innerText = "距top100票差";
     elDistance.innerText = "-";
     elDistance.className = "value orange-text";
   }
