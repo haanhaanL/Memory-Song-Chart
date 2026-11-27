@@ -174,6 +174,21 @@
   .chart-tooltip .tt-date { width: 96px; }
   .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
 
+  /* 全屏平铺水印 */
+  .watermark {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    user-select: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><text x='20' y='70' font-size='28' font-weight='900' fill='rgba(106,56,176,0.10)' transform='rotate(-25 100 60)'>mzc051</text></svg>");
+    background-repeat: repeat;
+    background-size: 240px 160px;
+  }
+
   @media (max-width: 600px) {
     body { padding: 20px 12px 48px; }
 
@@ -217,6 +232,10 @@
     .table-card:nth-of-type(2) tbody td:nth-child(3) { width: 36%; }
 
     .chart-container { height: 260px; }
+
+    .watermark {
+      background-size: 200px 140px;
+    }
   }
 </style>
 </head>
@@ -287,6 +306,9 @@
     <div class="chart-container" id="trendChart"></div>
   </div>
 </div>
+
+<!-- 全屏平铺水印 -->
+<div class="watermark"></div>
 
 <script>
 const CSV_FILE = "song_rank_history.csv";
@@ -401,10 +423,8 @@ function renderChart(records) {
   const legendData = [];
   const seriesColorMap = {};
 
-  // 用于“近7日”灰色图例的虚拟系列名
   const otherLegendName = "近7日";
 
-  // 倒序遍历日期，让图例倒序（最新在前）
   const orderedDates = dates.slice().reverse();
 
   orderedDates.forEach((date, index) => {
@@ -427,7 +447,6 @@ function renderChart(records) {
     }
 
     const labelDate = date.substring(5);
-    // 图例只保留今天、昨天、近7日
     if (date === todayStr || date === yesterday) {
       legendData.push(labelDate);
     } else if (legendData.indexOf(otherLegendName) === -1) {
@@ -449,18 +468,6 @@ function renderChart(records) {
     });
   });
 
-  // 为“近7日”灰色图例项构造一个空的占位系列（仅用于图例显示）
-  const legendPlaceholder = {
-    name: otherLegendName,
-    type: 'line',
-    data: [],
-    itemStyle: { color: '#999999' },
-    lineStyle: { color: '#999999', width: 1, type: 'solid' },
-    showSymbol: true,
-    symbol: 'circle',
-    symbolSize: 3
-  };
-
   const option = {
     tooltip: {
       trigger: 'axis',
@@ -471,9 +478,7 @@ function renderChart(records) {
       textStyle: { color: '#2c1a4a', fontSize: 13 },
       extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
       formatter: function(params) {
-        // 过滤掉占位系列，并按时间倒序
-        const realParams = params.filter(p => p.seriesName !== otherLegendName || p.value !== null);
-        const sorted = realParams.slice().sort((a, b) => {
+        const sorted = params.slice().sort((a, b) => {
           return b.seriesName.localeCompare(a.seriesName);
         });
         let html = '<div class="chart-tooltip">';
@@ -604,7 +609,6 @@ function render(records) {
   elRank.innerText = rRes.text;
   elRank.className = "value " + rRes.cls;
 
-  // 距top100票差 / 与top100票差（100内取绝对值显示正数）
   const latestRecord = records[records.length - 1];
   const prevRecord = records.length >= 2 ? records[records.length - 2] : null;
   const elDistance = document.getElementById("todayDistanceTo100");
