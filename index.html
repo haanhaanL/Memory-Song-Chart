@@ -16,6 +16,7 @@
     --pink: #e94e9b;
     --gray: #999999;
     --orange: #ff7e00;
+    --green: #2e9e5b;
     --theme: #AE72FF;
   }
   * { box-sizing: border-box; }
@@ -127,6 +128,7 @@
   .rank-change { font-weight: 700; }
   .pink-text { color: var(--pink); font-weight: 700; }
   .gray-text { color: var(--gray); font-weight: 700; }
+  .green-text { color: var(--green); font-weight: 700; }
   .orange-text { color: var(--orange); font-weight: 800; }
   .votes { font-variant-numeric: tabular-nums; }
   .change { font-variant-numeric: tabular-nums; }
@@ -174,7 +176,6 @@
   .chart-tooltip .tt-date { width: 96px; }
   .chart-tooltip .tt-val { flex: 1; text-align: right; font-weight: 600; }
 
-  /* 全屏平铺水印 */
   .watermark {
     position: fixed;
     top: 0;
@@ -307,7 +308,6 @@
   </div>
 </div>
 
-<!-- 全屏平铺水印 -->
 <div class="watermark"></div>
 
 <script>
@@ -343,11 +343,20 @@ function getLocalDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
-function formatChange(n, defaultVal = "-") {
+// 票数涨幅：正粉、负灰、0灰
+function formatVoteChange(n, defaultVal = "-") {
   if (n === undefined || n === null || n === "") return { text: defaultVal, cls: "gray-text" };
   const num = Number(n);
   if (isNaN(num) || num === 0) return { text: "0", cls: "gray-text" };
   return { text: num > 0 ? `+${num}` : `${num}`, cls: "pink-text" };
+}
+
+// 排名涨幅：正粉（前进）、负绿（下降）、0灰
+function formatRankChange(n, defaultVal = "-") {
+  if (n === undefined || n === null || n === "") return { text: defaultVal, cls: "gray-text" };
+  const num = Number(n);
+  if (isNaN(num) || num === 0) return { text: "0", cls: "gray-text" };
+  return { text: num > 0 ? `+${num}` : `${num}`, cls: num > 0 ? "pink-text" : "green-text" };
 }
 
 function fmtNum(n) {
@@ -424,7 +433,6 @@ function renderChart(records) {
   const seriesColorMap = {};
 
   const otherLegendName = "近7日";
-
   const orderedDates = dates.slice().reverse();
 
   orderedDates.forEach((date, index) => {
@@ -555,8 +563,8 @@ function renderDaily(daily) {
 
   const rowsDesc = [...daily].reverse();
   tbody.innerHTML = rowsDesc.map(d => {
-    const voteRes = formatChange(d.voteDiff);
-    const rankRes = formatChange(d.rankDiff);
+    const voteRes = formatVoteChange(d.voteDiff);
+    const rankRes = formatRankChange(d.rankDiff);
     const rankText = `<span class="rank">${d.totalRank || "-"}</span> / <span class="${rankRes.cls}">${rankRes.text}</span>`;
     const voteText = `${fmtNum(d.totalVotes)} / <span class="${voteRes.cls}">${voteRes.text}</span>`;
     return `<tr>
@@ -598,8 +606,8 @@ function render(records) {
     todayRankChange = (Number(prev["排名"]) || 0) - (Number(last["排名"]) || 0);
   }
 
-  const vRes = formatChange(todayVoteChange);
-  const rRes = formatChange(todayRankChange);
+  const vRes = formatVoteChange(todayVoteChange);
+  const rRes = formatRankChange(todayRankChange);
 
   const elVote = document.getElementById("todayVoteChange");
   elVote.innerText = vRes.text;
@@ -645,8 +653,8 @@ function render(records) {
   const tbody = document.getElementById("tbody");
   const rowsDesc = [...records].reverse().slice(0, 12);
   tbody.innerHTML = rowsDesc.map(r => {
-    const rankRes = formatChange(r["排名变化"]);
-    const voteRes = formatChange(r["票数涨幅"]);
+    const rankRes = formatRankChange(r["排名变化"]);
+    const voteRes = formatVoteChange(r["票数涨幅"]);
     const timeStr = r["时间"] ? r["时间"].substring(5, 16) : "-";
     return `<tr>
       <td>${timeStr}</td>
