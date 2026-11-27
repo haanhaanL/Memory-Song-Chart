@@ -401,6 +401,10 @@ function renderChart(records) {
   const legendData = [];
   const seriesColorMap = {};
 
+  // 用于“近7日”灰色图例的虚拟系列名
+  const otherLegendName = "近7日";
+
+  // 倒序遍历日期，让图例倒序（最新在前）
   const orderedDates = dates.slice().reverse();
 
   orderedDates.forEach((date, index) => {
@@ -423,7 +427,13 @@ function renderChart(records) {
     }
 
     const labelDate = date.substring(5);
-    legendData.push(labelDate);
+    // 图例只保留今天、昨天、近7日
+    if (date === todayStr || date === yesterday) {
+      legendData.push(labelDate);
+    } else if (legendData.indexOf(otherLegendName) === -1) {
+      legendData.push(otherLegendName);
+    }
+
     seriesColorMap[labelDate] = lineColor;
     series.push({
       name: labelDate,
@@ -439,6 +449,18 @@ function renderChart(records) {
     });
   });
 
+  // 为“近7日”灰色图例项构造一个空的占位系列（仅用于图例显示）
+  const legendPlaceholder = {
+    name: otherLegendName,
+    type: 'line',
+    data: [],
+    itemStyle: { color: '#999999' },
+    lineStyle: { color: '#999999', width: 1, type: 'solid' },
+    showSymbol: true,
+    symbol: 'circle',
+    symbolSize: 3
+  };
+
   const option = {
     tooltip: {
       trigger: 'axis',
@@ -449,7 +471,9 @@ function renderChart(records) {
       textStyle: { color: '#2c1a4a', fontSize: 13 },
       extraCssText: 'box-shadow: 0 4px 12px rgba(106,56,176,0.12); border-radius: 8px;',
       formatter: function(params) {
-        const sorted = params.slice().sort((a, b) => {
+        // 过滤掉占位系列，并按时间倒序
+        const realParams = params.filter(p => p.seriesName !== otherLegendName || p.value !== null);
+        const sorted = realParams.slice().sort((a, b) => {
           return b.seriesName.localeCompare(a.seriesName);
         });
         let html = '<div class="chart-tooltip">';
@@ -478,12 +502,7 @@ function renderChart(records) {
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 16,
-      textStyle: { fontSize: 12, color: '#2c1a4a' },
-      formatter: function(name) {
-        if (name === todayStr.substring(5)) return name;
-        if (name === yesterday.substring(5)) return name;
-        return '近7日';
-      }
+      textStyle: { fontSize: 12, color: '#2c1a4a' }
     },
     grid: {
       left: 48,
